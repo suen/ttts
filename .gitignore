@@ -1,0 +1,3 @@
+#file to exclude are declared here
+
+*.pyc
