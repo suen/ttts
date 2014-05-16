@@ -1,4 +1,26 @@
 
+Logger = function(node) {
+	this.parentNode = node;
+}
+
+Logger.log = function(msg) {
+	if (Logger.self == undefined) {
+		Logger.self = new Logger($("#network-stream"));
+	}
+	
+	d = new Date();
+	hour = d.getHours().toString();
+	minute = d.getMinutes().toString();
+	second = d.getSeconds().toString();
+	
+	tr = $("<tr>");
+	tdtime = $("<td>").text(hour + ":" + minute + ":" + second)
+	td = $("<td>").text(msg);
+	tr.append(tdtime)
+	tr.append(td)
+	Logger.self.parentNode.prepend(tr)
+}
+
 Connect = function(listener) {
 	this.socket = null;
 	this.isopen = false;
@@ -9,6 +31,7 @@ Connect = function(listener) {
 	
 	this.socket.onopen = function() {
 	   console.log("Connected!");
+	   Logger.log("Client connected")
 	   isopen = true;
 	};
 
@@ -28,6 +51,7 @@ Connect = function(listener) {
 	
 	this.socket.onclose = function(e) {
 	   console.log("Connection closed.");
+	   Logger.log("Connection closed")
 	   socket = null;
 	   isopen = false;
 	};
@@ -37,8 +61,11 @@ Connect = function(listener) {
 		console.log("Message sent: " + msg);
 	};
 	
-	console.log("Connection initialized");
+	console.log("Objects created");
+	Logger.log("Objects created")
 }
+
+
 
 TicTacToe = function (controller) {
 	this.playerChar = "";	
@@ -90,10 +117,17 @@ TicTacToe = function (controller) {
 	this.setBoard = function(board) {
 		if (typeof(board) == "string") {
 			board = board.replace(/\'/g, "\"")
-			this.board = JSON.parse(board)
+			newBoard = JSON.parse(board)
 		} else {
-			this.board = board;
+			newBoard = board;
 		}
+		if (this.board != newBoard) {
+			diff = this.boardDiff(newBoard, this.board)
+			if (diff!="")
+				Logger.log(diff)
+			this.board = newBoard
+		}
+		
 		this.displayBoard()
 	};
 
@@ -154,6 +188,18 @@ TicTacToe = function (controller) {
 	};
 
 
+	this.boardDiff = function(newBoard, oldBoard) {
+		for(i=0; i<6; i++) {
+			for(j=0; j<6; j++) {
+				if (oldBoard[i][j] != newBoard[i][j]) {
+					diff = "(" + (i+1).toString() + "," + (j+1).toString() + ") changed to '" + newBoard[i][j] + "'"
+					return diff
+				}				
+			}
+
+		}
+		return "";		
+	}
 
 }
 
@@ -170,6 +216,7 @@ Main = function() {
 		if (msgContent.substr(0, 10) == "PLAYERCHAR") {
 			playerChar = msgContent.substr(11, 12);
 			this.tic.setPlayerChar(playerChar)
+			Logger.log("Player Character is " + playerChar)
 		};
 		
 		if (msgContent.substr(0,10) == "BOARDSTATE") {
@@ -177,10 +224,17 @@ Main = function() {
 			//console.log("Board : " + board)
 			board = board.trim();
 			this.tic.setBoard(board);
+			//Logger.log("New board state received")
 		};
 		
 		if (msgContent.substr(0, 9) == "YOUR_TURN") {
+			Logger.log("Your turn")
 			this.tic.unlockBoard();
+		};
+		
+		if (msgContent.substr(0,9) == "GAME_OVER") {
+			player_winner = msgContent.substr(17,18)
+			Logger.log("Player " + player_winner + " wins, GAME OVER")
 		};
 	};
 	
