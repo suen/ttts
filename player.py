@@ -54,7 +54,10 @@ class AI(Player):
 		self.currentBoard = currentBoard
 		self.startThread = True
 
-class NetworkPlayer(Player):
+class AsyncPlayer(Player):
 	
 	def getNextMove(self, currentBoard):
-		pass
+		self.currentBoard = currentBoard
+		self.startThread = True
+	
+	def makeMove(self):

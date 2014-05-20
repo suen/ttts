@@ -26,27 +26,17 @@ Connect = function(listener) {
 	this.isopen = false;
 	
 	this.socket = new WebSocket("ws://127.0.0.1:9000");
-	this.socket.binaryType = "arraybuffer";
 	this.listener = listener;
 	
 	this.socket.onopen = function() {
 	   console.log("Connected!");
 	   Logger.log("Client connected")
+	   console.log(this.socket)
 	   isopen = true;
 	};
 
 	this.socket.onmessage = function(e) {
-	   if (typeof e.data == "string") {
-		  //console.log("Text message received: " + e.data);
 		  listener.onMessageReceived(e.data);
-	   } else {
-		  var arr = new Uint8Array(e.data);
-		  var hex = '';
-		  for (var i = 0; i < arr.length; i++) {
-			 hex += ('00' + arr[i].toString(16)).substr(-2);
-		  }
-		  console.log("Binary message received: " + hex);
-	   }
 	};
 	
 	this.socket.onclose = function(e) {
@@ -59,12 +49,16 @@ Connect = function(listener) {
 	this.sendMessage = function(msg) {
 		this.socket.send(msg);
 		console.log("Message sent: " + msg);
+		Logger.log("Message sent: " + msg);
 	};
 	
-	console.log("Objects created");
-	Logger.log("Objects created")
-}
+	this.helloworld = function() {
+		Logger.log(this.socket);
+	};
 
+	console.log("Objects created");
+	Logger.log("Objects created");
+}
 
 
 TicTacToe = function (controller) {
@@ -82,6 +76,11 @@ TicTacToe = function (controller) {
 			return;
 		$(this).text("Wait");
 		$(this).addClass("disabled");
+		move = TicTacToe.instance().lastmove
+		Logger.log("Sending move " + move)
+		move[0]--;
+		move[1]--;
+		TicTacToe.instance().controller.connect.socket.send("TTTS PLAYER_MOVE " + move.toString());
 	});
 	
 	this.setPlayerChar = function(playerChar) {
@@ -93,9 +92,8 @@ TicTacToe = function (controller) {
 			row = [];
 			for(j=0; j<6; j++) {
 				td_ids = "#" + (i+1).toString() + "-" + (j+1).toString()
-				mythis = this
 				$(td_ids).click(function(evnt) {
-					mythis.boardClickedEvent(this, evnt);
+					TicTacToe.instance().boardClickedEvent(this, evnt);
 				});
 				row.push("");
 			}
@@ -110,8 +108,10 @@ TicTacToe = function (controller) {
 	
 	this.unlockBoard = function() {
 		this.locked = false;
-		$(this).text("Confirm");
-		$(this).removeClass("disabled");
+		this.lastmove = [];
+		this.moved = false;
+		$("#confirm-move-btn").text("Confirm");
+		$("#confirm-move-btn").removeClass("disabled");
 	};
 
 	this.setBoard = function(board) {
@@ -147,6 +147,7 @@ TicTacToe = function (controller) {
 		//console.log(tdid)
 		$(tdid).addClass(this.playerClass);
 		$(tdid).text(this.playerChar);
+		Logger.log("You moved " + this.lastmove)
 	};
 
 	this.remove = function(coord) {
@@ -158,6 +159,7 @@ TicTacToe = function (controller) {
 		tdid = "#" + coord[0].toString() + "-" + coord[1].toString()
 		$(tdid).removeClass(this.playerClass);
 		$(tdid).text("");
+		Logger.log("Removed " + this.lastmove)
 	};
 
 	this.displayBoard = function() {
@@ -203,23 +205,49 @@ TicTacToe = function (controller) {
 
 }
 
+TicTacToe.setMain = function(main){
+	TicTacToe.main = main;
+}
+
+TicTacToe.instance = function() {
+	if (typeof(TicTacToe.self) == "undefined")
+		TicTacToe.self = new TicTacToe(TicTacToe.main)
+	return TicTacToe.self
+}
+
 Main = function() {
-	this.connect = Connect(this);
-	this.tic = new TicTacToe(this);
+	this.connect = new Connect(this);
+	TicTacToe.setMain(this)
+//	this.tic = new TicTacToe(this);
+	this.tic = TicTacToe.instance();
 	this.tic.createBoard();
-	
+	$("#table-container").hide();
+
+
+	mythis = this
+	$("#start-game-button").click(function(evt) {
+		mythis.connect.socket.send("TTTS WAITING");
+		$("#start-game-button").text("Waiting response");
+		$("#start-game-button").addClass("disabled");
+	});
+
 	this.onMessageReceived = function(msg) {
 		console.log("Received Msg : " + msg)
 		msgType = msg.substr(0,4);
 		msgContent = msg.substr(5);
 
-		if (msgContent.substr(0, 10) == "PLAYERCHAR") {
+		if (msgContent.substr(0, 10) == "START_GAME") {
 			playerChar = msgContent.substr(11, 12);
 			this.tic.setPlayerChar(playerChar)
+			$("#table-container").show();
+			$("#game-initialize-container").hide();
+			this.tic.unlockBoard()
+			
+			Logger.log("Game started")
 			Logger.log("Player Character is " + playerChar)
 		};
 		
-		if (msgContent.substr(0,10) == "BOARDSTATE") {
+		if (msgContent.substr(0,11) == "BOARD_STATE") {
 			board = msgContent.substr(11);
 			//console.log("Board : " + board)
 			board = board.trim();
@@ -227,7 +255,7 @@ Main = function() {
 			//Logger.log("New board state received")
 		};
 		
-		if (msgContent.substr(0, 9) == "YOUR_TURN") {
+		if (msgContent.substr(0, 9) == "MAKE_MOVE") {
 			Logger.log("Your turn")
 			this.tic.unlockBoard();
 		};
@@ -246,6 +274,6 @@ Main = function() {
 //b = [["X", "O", "X", "", "", ""],["", "", "", "O", "", ""],["", "", "", "", "", ""],["", "", "", "", "", ""],["", "", "", "", "", ""],["", "", "", "", "", ""]]
 
 $(document).ready(function() {
-	Main();
+	m = Main();
 });
 

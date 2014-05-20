@@ -48,6 +48,19 @@
 	.time-td {
 		width: 20px
 	}
+	.game-container{
+		width:600px; 
+		float: left;
+		height: 500px;
+		background: #dfdfdf;
+		margin-right: 15px;
+	}
+	#start-game-button {
+		margin: 200px 0px 0px 200px;
+		width: 200px;
+		height: 50px;
+	}
+	
     </style>
 
 
@@ -66,7 +79,11 @@
 
     <div class="container">
       <!-- Example row of columns -->
-      <div id="table-container" style="width:50%; float: left;">
+      <div id="game-initialize-container" class="game-container">
+		 <button class="btn btn-large btn-primary" id="start-game-button">START GAME</button>
+      </div>
+      
+      <div id="table-container" class="game-container">
 			<h3>Opponent: xerces</h3>
 			<h4>Possible score <span>1200</span></h4>
 			

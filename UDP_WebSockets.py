@@ -67,9 +67,8 @@ class MyServerProtocol(WebSocketServerProtocol):
 			print("Binary message received: {0} bytes".format(len(payload)))
 			self.sendMessage(payload, isBinary)
 			return
-
 		msg = payload.decode('utf8')
-		msg = Network.Instance().treat(self, msg)
+		Network.Instance().treat(self, msg)
 		#self.sendMessage(msg, isBinary)
 		print("Text message received: {0}".format(payload.decode('utf8')))
 
@@ -116,7 +115,7 @@ class Network:
 	def treat(self, peer, msg):
 		print msg
 		self.main.onWebPeerMessage(peer, msg)
-		return str(len(self.webconnections)) + " peers connected"
+		#return str(len(self.webconnections)) + " peers connected"
 		
 	#UDP broadcast
 	def sendBroadcast(self, msg):
@@ -183,9 +182,11 @@ class Main:
 
 	def setWebClient(self, client):
 		self.webClient = client
-		self.new_game_init()
+		#self.new_game_init()
 
 	def onWebPeerMessage(self, webConnection, msg):
+		print "MESSAGE FROM CLIENT " + msg
+		self.new_game_init()
 		pass
 		
 	def playerNextMove(self, player, move):
@@ -228,23 +229,6 @@ class Main:
 		time.sleep(1)
 		self.run()
 		
-		
-		
-	def run1(self):
-		
-		while(self.net is None):
-			time.sleep(2)
-		
-		if len(Network.Instance().webconnections) > 0:
-			peer = Network.Instance().webconnections[0]
-			action = self.getNextAction();
-			if action =="":
-				peer.sendMessage("Server heartbeat", False)
-			else:
-				peer.sendMessage(action, False)
-			
-		time.sleep(2)
-		self.run()
 
 def main():
 	m = Main()
