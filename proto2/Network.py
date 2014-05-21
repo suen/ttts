@@ -55,14 +55,15 @@ class UDPBroadcaster(DatagramProtocol):
 
 class MyTCPProtocol(LineReceiver):
     def __init__(self):
-        self.name = None
+        self.peerName = None
 
     def connectionMade(self):
         self.sendLine("Please connect yourself with your 'CONNECT <yourname>'")
         pass
 
     def connectionLost(self, reason):
-        Network.Instance().removePeer(self.name, self)
+        print "Peer disconnected"
+        Network.Instance().removePeer(self.peerName, self)
         
     def lineReceived(self, line):       
         if "CONNECT" not in line:
@@ -83,11 +84,11 @@ class MyTCPProtocolFactory(Factory):
         return MyTCPProtocol()
         
     
-class MyServerProtocol(WebSocketServerProtocol):
+class MyWebSocketServerProtocol(WebSocketServerProtocol):
 
     def onConnect(self, request):
         print("Client connecting: {0}".format(request.peer))
-        Network.Instance().addWebClient(self)
+        Network.Instance().setWebClient(self)
 
     def onOpen(self):
         print("WebSocket connection open.")
@@ -98,9 +99,10 @@ class MyServerProtocol(WebSocketServerProtocol):
             self.sendMessage(payload, isBinary)
             return
         msg = payload.decode('utf8')
-        Network.Instance().treat(self, msg)
+        #Network.Instance().treat(self, msg)
         #self.sendMessage(msg, isBinary)
         print("Text message received: {0}".format(payload.decode('utf8')))
+        print("NOBODY IS LISTENING TO THIS MESSAGE ????")
 
     def onClose(self, wasClean, code, reason):
         print("WebSocket connection closed: {0}".format(reason))
@@ -114,31 +116,29 @@ class Network:
         self.broadcastReceiver = None
         self.broadcaster = None
         self.websocketFactory = None
-        self.webconnections = []
         self.peers = []
     
     def setMain(self, main):
         self.main = main
 
-    def addWebClient(self, webclient):
-        if webclient not in self.webconnections:
-            self.webconnections.append(webclient)
-            print "passing webclient"
-        self.main.setWebClient(self.webconnections[0])
-    
+    def setWebClient(self, webclient):
+        self.main.setWebClient(webclient)
+           
     def removeWebClient(self, webclient):
-        if webclient in self.webconnections:
-            self.webconnections.remove(webclient)
+        self.setWebClient(webclient)
 
-    def addPeer(self, peer, name):
-        if (peer, name) not in self.peers:
+    def addPeer(self, name, peer):
+        if (name, peer) not in self.peers:
             self.peers.append((name, peer))
-            print "new peer"+ str((peer, name))
+            print "new peer"+ str((name, peer))
+            self.main.onPeerListChange()
 
-    def removePeer(self, peer, name):
-        if (peer, name) in self.peers:
+    def removePeer(self, name, peer):
+        print "Remove Peer initialized"
+        if (name, peer) in self.peers:
             self.peers.remove((name, peer))
-            print("peer removed " + str((peer, name)))           
+            print("peer removed " + str((name, peer)))
+            self.main.onPeerListChange()
 
     def getPeers(self):
         return self.peers
@@ -149,7 +149,7 @@ class Network:
         reactor.listenUDP(1210, self.broadcaster)
 
         self.websocketFactory = WebSocketServerFactory("ws://localhost:9000", debug = False)
-        self.websocketFactory.protocol = MyServerProtocol 
+        self.websocketFactory.protocol = MyWebSocketServerProtocol 
         reactor.listenTCP(9000,self.websocketFactory)
         
         reactor.listenTCP(1210, MyTCPProtocolFactory())
@@ -159,7 +159,7 @@ class Network:
     def treat(self, peer, msg):
         print msg
         self.main.onWebPeerMessage(peer, msg)
-        #return str(len(self.webconnections)) + " peers connected"
+        #return str(len(self.webclient)) + " peers connected"
         
     #UDP broadcast
     def sendBroadcast(self, msg):

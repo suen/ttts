@@ -7,6 +7,7 @@ Created on May 17, 2014
 from Network import Network,BroadcastListener
 from Game import TicTacToe
 from Player import AI, AsyncPlayer
+from User import AsyncUser
 import time, sys
 from threading import Thread
 
@@ -18,6 +19,7 @@ class Main:
         self.webClient = None;
         self.startGame = False
         self.board_sent_to_player = False
+        self.user = AsyncUser(self)
 
         #self.new_game_init()
 
@@ -38,11 +40,16 @@ class Main:
         self.net.startNetwork()
 
     def setWebClient(self, client):
-        if self.webClient is not None:
-            return;
-        self.webClient = client
-        self.player1 = AsyncPlayer("Web Player", "X", self)
-        self.player1.setWebSocket(self.webClient)
+        self.user.setWebClient(client);
+#        self.player1 = AsyncPlayer("Web Player", "X", self)
+#        self.player1.setWebSocket(self.webClient)
+
+    def getPeerList(self):
+        return self.net.getPeers()
+    
+    def onPeerListChange(self):
+        print "calling self.user for peer change"
+        self.user.onPeerListChange()
     
     def setOpponentPlayer(self, opponent):
         self.player2 = opponent

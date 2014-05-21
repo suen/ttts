@@ -92,6 +92,18 @@ class AsyncPlayer(Player):
             xcord = int(message[comma_index-1])
             ycord = int(message[comma_index+1])
             self.main.playerNextMove(self, [xcord, ycord])
+            
+        elif "PEER_LIST" in message:
+            peers = self.main.net.getPeers()
+            peerString = "{"
+            for i in range(0, len(peers)):
+                peer = peers[i]
+                peerString += "'" + str(i) + "': '" + str(peer[0]) + "'"
+                
+                if i != len(peers) - 1 :
+                    peerString += ","
+            peerString += "}"
+            self.wsocket.sendMessage("PEER_LIST " + peerString)
 
                     
         return True

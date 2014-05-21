@@ -14,10 +14,73 @@
 		margin-right: 10px;
 		margin-bottom: 20px;
 	}
- 
+	
+	#chatbox{
+		width:200px; 
+		height: 300px; 
+		border: 1px solid #dfdfdf; 
+		position: absolute; 
+		z-index: 2; 
+		background-color:#ffffff;
+		margin: 100px 0px 0px 100px;
+		opacity: 0.9;
+		overflow: hidden;
+	}
+	#chatbox h4 {
+		text-align: center;
+		display: block;
+		width: 100%;
+		background: #1f1f1f;
+		color: #ffffff;
+		margin: 0px;
+		padding: 10px;
+		height: 40px;
+	}
+	
+	#chatbox div {
+		width: 100%;
+		float: left;
+	}
+	#chatbox p {
+		padding: 5px;
+		margin: 0px;
+	}
+	
+	#chatbox #chat-stream {
+		height: 220px;
+		overflow: auto;
+		border-bottom: 1px solid;
+	}
+ 	#chatbox #chat-input {
+		height: 40px;
+		border-bottom: 1px solid;
+	}
+ 	#chatbox #chat-input input {
+		height: 100%;
+		width: 150px;
+ 	}
+ 	#chatbox #chat-input button {
+ 		width: 48px;
+ 		height: 100%;
+ 	}
+	
     </style>
   </head>
   <body>
+  <div id="thickbox" style="display: none; width:100%; height: 100%; position: absolute; margin: 0px 0px 0px 0px; background-color: #ffffff; float: left; z-index:5">
+  		<h2 id="thickbox-message" style="text-align: center; margin-top: 200px;">Another web client logged in</h1>
+  </div>
+  
+  <div id="chatbox">
+  		<h4 id="chatbox-title">Chat</h4>
+  		<div id="chat-stream">
+  			<p>User: there is nothing special going on with this shit</p>
+  			<p>User: there is nothing special going on with this shit</p>
+  		</div>
+  		<div id="chat-input">
+  			<input type="text" id="chat-text" /><button id="chat-send">Send</button>
+  		</div>
+  </div>
 
     <div class="navbar navbar-inverse" role="navigation">
       <div class="container">
@@ -31,49 +94,45 @@
     <div class="container">
       <!-- Example row of columns -->
       <div class="row">
-        <div class="col-md-3 box">
-          <h3>Last Game played</h3>
-          <table class="table">
-			<tr><td>Winner: <span>xerces</span></td></tr>
-			<tr><td>Score: <span>1000</span></td></tr>
-			<tr><td>Loser: <span>tyeu</span></td></tr>
+
+        <div class="col-md-2" style="background: #efefef; float: left;">
+          <h4>Peers connected</h4>
+           <table class="table" id="peer-list">
+			<tr><td>skuller(11)</td></tr>
+			<tr><td>dauja</td></tr>
+			<tr><td>samey</td></tr>
           </table>
+      	 </div>
+        <div class="col-md-6">
+        	<div>
+				<h2>New Room</h2>
+				<table class="table">
+					<tr><td>Room Name</td><td><input type="text" id="new-room-name-field" /></td></tr>
+					<tr><td colspan="2"><button class="btn btn-primary btn-lg btn-success" id="create-room-btn">Create</button></td></tr>
+				</table>
+
+
+	       </div>
         </div>
-        
-        <div class="col-md-3 box">
-          <h3>Top Players</h3>
-           <table class="table">
-			<tr><td>xperdie (100)</td></tr>
-			<tr><td>dictumfaith (89)</td></tr>
-			<tr><td>skuller(11) </td></tr>
-          </table>
+
+        <div class="col-md-3" style="background: #efefef; float: left;">
+       <h3>Network Stream</h3>
+       <div style="height: 300px; overflow: auto; margin: 0px 0px 0px 0px;">
+		<table class="table table-bordered" id="network-stream">
+			<!--<tr><td class="time-td">11:12</td><td>Game begins</td></tr>
+			<tr><td>hi</td></tr> -->
+		</table>
+		</div>
        </div>
 
-        <div class="col-md-3 box">
-          <h3>Rising Player</h3>
-           <table class="table">
-			<tr><td>skuller(11)</td></tr>
-			<tr><td>dauja</td></tr>
-			<tr><td>samey</td></tr>
-          </table>
-       </div>
-
-        <div class="col-md-2 box">
-          <h3>Peers connected</h3>
-           <table class="table">
-			<tr><td>skuller(11)</td></tr>
-			<tr><td>dauja</td></tr>
-			<tr><td>samey</td></tr>
-          </table>
-       </div>
        </div>
        
-       <div class="row text-center ">
+       <div class="row text-center" style="margin: 20px 0px 0px 0px;">
 			<div class="cols-md-6 ">
-			  <a class="btn btn-primary btn-lg btn-success" href="#">Create Room</a>
-				<a class="btn btn-primary btn-lg btn-default" href="#" >Join Room</a>
-				<a class="btn btn-primary btn-lg btn-warning" href="#">Settings</a>
-				<a class="btn btn-primary btn-lg btn-danger" href="#">Quit</a>
+			  <a class="btn btn-primary btn-lg btn-success" href="#" id="create-room-form-btn">Create Room</a>
+				<a class="btn btn-primary btn-lg btn-default" href="#" id="join-room-btn">Join Room</a>
+				<a class="btn btn-primary btn-lg btn-warning" href="#" id="setting-btn">Settings</a>
+				<a class="btn btn-primary btn-lg btn-danger" href="#" id="quit-game">Quit</a>
 			</div>
        </div>
 
@@ -95,9 +154,11 @@
     <!-- Bootstrap core JavaScript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
-    <script src="../../dist/js/bootstrap.min.js"></script>
-  
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+	<script src="js/model.js"></script>
+	<script src="js/dashboard.js"></script>
+
 
 </body>
 </html>
