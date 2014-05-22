@@ -51,6 +51,9 @@ class Main:
         print "calling self.user for peer change"
         self.user.onPeerListChange()
     
+    def onPeerMsgReceived(self, peerIdentity, msg):
+        self.user.onPeerMsgReceived(peerIdentity, msg)
+    
     def setOpponentPlayer(self, opponent):
         self.player2 = opponent
         

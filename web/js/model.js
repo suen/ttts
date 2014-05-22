@@ -21,34 +21,137 @@ Logger.log = function(msg) {
 }
 
 
+
+function createChatDOM(peer, evntListener) {
+
+	
+}
+
 Chat = function(peer, main) {
-	this.parentNode = $("#chatbox")
+	chatbox = $("<div>");
+	chatbox.attr("class", "chatbox");
 	winHeight = window.innerHeight;
 	winWidth = window.width;
 	chatTopMargin = winHeight - 300;
-	this.parentNode.css("margin", chatTopMargin.toString() + "px 0px 0px 100px")
+	chatBoxCount = main.chats.length;
+	chatbox.css("margin-top", chatTopMargin.toString() + "px")
+	chatbox.css("margin-left", ((chatBoxCount*210)+100).toString() +"px")
+	
+	chatboxTitle = $("<div>")
+	chatboxTitle.attr("class", "title")
+	
+	chatboxh4 = $("<h4>");
+	chatboxh4.text("Chat - " + peer.substr(peer.indexOf("_")+1));
+	
+	closeButton = $("<button>")
+	closeButton.attr("class", "control")
+	closeButton.text("X")
+	
+	minimizeButton = $("<button>")
+	minimizeButton.attr("class", "control")
+	minimizeButton.text("-")
+	
+	minimizeButton.click(function() {
+		mychatStream = $(this).parent().next();
+		mychatInput = mychatStream.next();
+		mychatbox = mychatStream.parent();
+		
+		display = mychatStream.css("display")
+		
+		if (display.toLowerCase()!="none"){
+			mychatStream.hide();
+			mychatInput.hide();
+			mychatbox.css("height", "40px")
+			mychatbox.css("margin-top", (winHeight-40).toString() + "px")
+		} else {
+			mychatStream.show();
+			mychatInput.show();
+			mychatbox.css("height", "300px")
+			mychatbox.css("margin-top",chatTopMargin.toString() + "px")
+		}
+			
+	});
 
-	$("#chatbox-title").text("Chat - " + peer)
-	$("#chat-stream").text("")
-	$("#chat-text").text("")
 
+	closeButton.click(function(){
+		mychatbox = $(this).parent().parent();
+		display = mychatbox.css("display")
+		if(display.toLowerCase()!="none") {
+			mychatbox.hide();
+		}
+	});
+
+	chatboxTitle.append(chatboxh4);
+	chatboxTitle.append(closeButton);
+	chatboxTitle.append(minimizeButton);
+	
+	chatStream = $("<div>");
+	chatStream.attr("class", "chat-stream")
+	
+	chatInput = $("<div>");
+	chatInput.attr("class", "chat-input")
+	
+	chatText = $("<input>");
+	chatText.attr("type", "text")
+	sendButton = $("<button>")
+	sendButton.text("send");
+	
+	chatInput.append(chatText)
+	chatInput.append(sendButton)
+	
+	chatbox.append(chatboxTitle)
+	chatbox.append(chatStream)
+	chatbox.append(chatInput)
+	
+	$("body").prepend(chatbox);	
+	chatbox.hide();
+	
+	this.getPeerIdentity = function() {
+		return peer;
+	}
 	
 	this.onMessageReceived = function(chatmsg) {
-		p = $("<p>").text(peer + ": " + chatmsg);
-		$("#chat-stream").append(p)		
+		p = $("<p>").text(peer.substr(peer.indexOf("_")+1) + ": " + chatmsg);
+		chatStream.append(p)
+
+		display = chatbox.css("display")
+		if(display.toLowerCase()=="none") {
+			chatbox.show();
+			this.chatBoxHidden = false;
+		}
 	};
 	
+	this.chatbox = chatbox
 	
-	chat = this
-	$("#chat-send").click(function() {
-		chatmsg = $("#chat-text").val()
-		$("#chat-text").val("")
+	this.showChatBox = function() {
+		console.log("showing box")
+		display = this.chatbox.css("display")
+		console.log(display)
+		if(display.toLowerCase()=="none") {
+			this.chatbox.show();
+		}	
+	}
+	
+	sendButton.click(function(evt) { 
+		
+		txtField = $(this).prev();
+		chatmsg = txtField.val();
+		txtField.val("");
+		
+//		chatmsg = chatText.val();
+//		chatText.val("");
+
 		p = $("<p>").text("Me: " + chatmsg);
-		$("#chat-stream").append(p)
+		
+		myChatStream = $(this).parent().prev()
+		
+		myChatStream.append(p)
 		main.sendChat(peer, chatmsg)
 	});
-	
-	
+
+		
+	chatbox.show();
+	Logger.log("new Chat instance for " + peer + " created")
 }
 
 

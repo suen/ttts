@@ -51,6 +51,14 @@ class AsyncUser(User):
 		pass
 	
 	def onChatMessage(self, peer, message):
+		self.webclient.sendMessage("CHAT " + peer + " " + message)
+		pass
+	
+	def onPeerMsgReceived(self, peerIdentity, msg):
+		
+		if "CHAT" in msg:
+			self.onChatMessage(peerIdentity, msg[5:])
+		print "AsyncUser treating TCP msg: " + msg
 		pass
 	
 	def onWebClientMessage(self, msg, isBinary):	
@@ -60,9 +68,15 @@ class AsyncUser(User):
 			self.onPeerListChange()
 			
 		if "CHAT" in msg:
+			msg = msg[5:]
+			id_peer = int(msg[0: msg.find("_")])			
+			
+			msg = msg[msg.find(" ")+1:]
+			
 			peers = self.main.getPeerList()
-			for peer in peers:
-				peer[1].sendLine(msg)
+			peers[id_peer][1].sendLine("CHAT " + msg);
+		#	for peer in peers:
+		#		peer[1].sendLine(msg)
 		
 		#self.webclient.sendMessage("I will serving you very soon, have patience")
 		

@@ -55,7 +55,7 @@ class UDPBroadcaster(DatagramProtocol):
 
 class MyTCPProtocol(LineReceiver):
     def __init__(self):
-        self.peerName = None
+        self.peerName = ""
 
     def connectionMade(self):
         self.sendLine("Please connect yourself with your 'CONNECT <yourname>'")
@@ -64,19 +64,29 @@ class MyTCPProtocol(LineReceiver):
     def connectionLost(self, reason):
         print "Peer disconnected"
         Network.Instance().removePeer(self.peerName, self)
-        
+
+    def onLineReceived(self, peerIdentity, line):
+        print "No TCP Listeners implemented for msg by " + peerIdentity + " >>> " + line
+        pass
+    
     def lineReceived(self, line):       
-        if "CONNECT" not in line:
-            return
-                
-        space_index = line.find(" ")
-        peerName = line[space_index+1:]
-        if len(peerName) > 30:
-            return
-        Network.Instance().addPeer(peerName, self)
-        self.peerName = peerName
-        self.sendLine("welcome '" + peerName + "', You have been added to my list. There are currently " 
-                      + str(len(Network.Instance().getPeers())) + " in my list, Welcome abroad")
+        print "TCP received: " + line
+        
+        if "CONNECT" in line:         
+            space_index = line.find(" ")
+            peerName = line[space_index+1:]
+            if len(peerName) > 30:
+                return
+            peerCount = len(Network.Instance().getPeers())
+            
+            self.peerName = str(peerCount) + "_" + peerName
+            
+            Network.Instance().addPeer(self.peerName, self)
+            self.sendLine("welcome '" + peerName + "', You have been added to my list. There are currently " 
+                          + str(peerCount) + " in my list, Welcome abroad")
+        else:
+            self.onLineReceived(self.peerName, line);
+            
 
 class MyTCPProtocolFactory(Factory):
     
@@ -129,6 +139,7 @@ class Network:
 
     def addPeer(self, name, peer):
         if (name, peer) not in self.peers:
+            peer.onLineReceived = self.main.onPeerMsgReceived
             self.peers.append((name, peer))
             print "new peer"+ str((name, peer))
             self.main.onPeerListChange()
