@@ -32,7 +32,10 @@ class AsyncUser(User):
 		for dupli in self.duplicates:
 			dupli.sendMessage("DUPLICATE_WEBCLIENT")
 		self.duplicates = []
-		
+	
+	
+	def onNewBroadcastReceived(self, msgTuple):
+		self.webclient.sendMessage("NEW_BROADCAST " + str(msgTuple) )	
 	
 	def onPeerListChange(self):
 		print "Sending Peer List to webclient"
@@ -59,7 +62,7 @@ class AsyncUser(User):
 		if "CHAT" in msg:
 			self.onChatMessage(peerIdentity, msg[5:])
 		print "AsyncUser treating TCP msg: " + msg
-		pass
+
 	
 	def onWebClientMessage(self, msg, isBinary):	
 		print "AsyncUser action [" +  msg + "]"
@@ -75,6 +78,15 @@ class AsyncUser(User):
 			
 			peers = self.main.getPeerList()
 			peers[id_peer][1].sendLine("CHAT " + msg);
+			
+		if "CREATE_ROOM" in msg:
+			roomName = msg[12:]
+			self.main.createNewRoom(roomName);
+			self.webclient.sendMessage("NEW_ROOM BROADCAST DONE")
+		
+		if "REBROADCAST" in msg:
+			self.main.reBroadcastLastMsg()
+			
 		#	for peer in peers:
 		#		peer[1].sendLine(msg)
 		

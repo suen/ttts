@@ -20,6 +20,9 @@ class Main:
         self.startGame = False
         self.board_sent_to_player = False
         self.user = AsyncUser(self)
+        self.userName = "Daubajee"
+        self.broadcastReceived = []
+        self.lastBroadcastedMsg = ""
 
         #self.new_game_init()
 
@@ -54,6 +57,11 @@ class Main:
     def onPeerMsgReceived(self, peerIdentity, msg):
         self.user.onPeerMsgReceived(peerIdentity, msg)
     
+    def onBroadcastReceived(self, msgTuple):
+        if msgTuple not in self.broadcastReceived:
+            self.broadcastReceived.append(msgTuple)
+            self.user.onNewBroadcastReceived(msgTuple)              
+            
     def setOpponentPlayer(self, opponent):
         self.player2 = opponent
         
@@ -61,7 +69,15 @@ class Main:
         self.playerMove = move
         self.playerHasMoved = True
         return;
-        
+    
+    def createNewRoom(self, roomName):
+        self.lastBroadcastedMsg = "NEW_ROOM " + roomName
+        self.net.sendBroadcast(self.lastBroadcastedMsg);
+
+    def reBroadcastLastMsg(self):
+        if self.lastBroadcastedMsg != "":
+            self.net.sendBroadcast(self.lastBroadcastedMsg);
+
  
     def run(self):
 

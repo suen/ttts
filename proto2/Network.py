@@ -19,15 +19,18 @@ class UDPBroadcaster(DatagramProtocol):
         self.broadcastAddress = address
         self.breceiver = breceiver
         self.broadcastMsg = ""
+        self.broadcastCount = 0
         self.startBroadcast = False
     
     def setMsgToBroadcast(self, message):
         self.broadcastMsg = message
+        self.broadcastCount = 3
         self.startBroadcast = True
         print "UDP broadcast started"
         
     def stopBroadcast(self):
         self.startBroadcast = False
+        self.broadcastCount = 0
         self.broadcastMsg = ""
         print "UDP broadcast stopped" 
         
@@ -40,6 +43,10 @@ class UDPBroadcaster(DatagramProtocol):
         while 1:
             if self.startBroadcast:
                 self.transport.write(self.broadcastMsg, self.broadcastAddress)
+                self.broadcastCount -= 1
+                if self.broadcastCount == 0:
+                    self.startBroadcast = False
+                    self.broadcastMsg = ""
             time.sleep(2)
  
 
@@ -82,8 +89,9 @@ class MyTCPProtocol(LineReceiver):
             self.peerName = str(peerCount) + "_" + peerName
             
             Network.Instance().addPeer(self.peerName, self)
-            self.sendLine("welcome '" + peerName + "', You have been added to my list. There are currently " 
-                          + str(peerCount) + " in my list, Welcome abroad")
+            #self.sendLine("welcome '" + peerName + "', You have been added to my list. There are currently " 
+            #              + str(peerCount) + " in my list, Welcome abroad")
+            self.sendLine("CONNECT_OK " + Network.Instance().main.username)
         else:
             self.onLineReceived(self.peerName, line);
             
@@ -156,7 +164,7 @@ class Network:
 
             
     def startNetwork(self):
-        self.broadcaster = UDPBroadcaster(("192.168.1.255", 1210), self)
+        self.broadcaster = UDPBroadcaster(("192.168.12.255", 1210), self)
         reactor.listenUDP(1210, self.broadcaster)
 
         self.websocketFactory = WebSocketServerFactory("ws://localhost:9000", debug = False)
@@ -180,8 +188,9 @@ class Network:
     def stopBroadcast(self):
         self.broadcaster.stopBroadcast()
     
-    def broadcastReceived(self, dtuple):
-        print dtuple, " RECEIVED"
+    def onBroadcastReceived(self, dtuple):
+        self.main.onBroadcastReceived(dtuple);
+        #print dtuple, " RECEIVED"
             
     #TCP receiver
     def setReceiver(self, receiver):

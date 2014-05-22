@@ -14,6 +14,12 @@
 		margin-right: 10px;
 		margin-bottom: 20px;
 	}
+	
+	.broadcast-reply-table-container {
+		height: 300px;
+		overflow: auto;
+		border-bottom: 5px solid #dfdfdf;
+	}
 
 	.chatbox{
 		width:200px; 
@@ -120,16 +126,14 @@
 			<tr><td>samey</td></tr>
           </table>
       	 </div>
-        <div class="col-md-6">
-        	<div>
-				<h2>New Room</h2>
-				<table class="table">
-					<tr><td>Room Name</td><td><input type="text" id="new-room-name-field" /></td></tr>
-					<tr><td colspan="2"><button class="btn btn-primary btn-lg btn-success" id="create-room-btn">Create</button></td></tr>
-				</table>
-
-
-	       </div>
+        <div class="col-md-6" id="content">
+<!-- 			<div>
+			<h2>New Room</h2>
+			<table class="table">
+				<tr><td>Room Name</td><td><input type="text" id="new-room-name-field" /></td></tr>
+				<tr><td colspan="2"><button class="btn btn-primary btn-lg btn-success" id="create-room-btn">Create</button></td></tr>
+			</table>
+			</div> -->
         </div>
 
         <div class="col-md-3" style="background: #efefef; float: left;">

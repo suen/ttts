@@ -25,6 +25,78 @@ Dashboard = function(main) {
 		this.peerListTableNode.text("");	
 	}
 	
+	this.createNewRoomDOM = function() {
+		divcontainer = $("<div>")
+		h2 = $("<h2>").text("New Room")
+		
+		table = $("<table>").attr("class", "table");
+		
+		tr1 = $("<tr>");
+		tr2 = $("<tr>")
+		
+		td11 = $("<td>").text("Room Name");
+		inputName = $("<input>").attr("type", "text");
+		td12 = $("<td>").append(inputName);
+		
+		tr1.append(td11).append(td12);
+		
+		td21 = $("<td>").attr("colspan", "2");
+		createButton = $("<button>").attr("class", "btn btn-primary btn-lg btn-success");
+		createButton.text("Create")
+		td21.append(createButton);
+		
+		tr2.append(td21);
+		
+		table.append(tr1).append(tr2);
+		
+		divcontainer.append(h2).append(table);
+		
+		$("#content").append(divcontainer)
+		
+		that = this
+		createButton.click(function(evt) {
+			roomName = $(this).parent().parent().prev().children().last().children().val()
+			that.main.createRoom(roomName);
+		});
+	}
+	
+	this.broadcastReplyTable = null;
+	this.createBroadcastReplyDOM = function(){
+		divcontainer = $("<div>")
+		h2 = $("<h2>").text("Broadcast Reply")
+		tablecontainer = $("<div>").attr("class", "broadcast-reply-table-container");
+		table = $("<table>").attr("class", "table");
+
+		tablecontainer.append(table)
+		
+		rebroadcastBtn = $("<button>").text("RE-BROADCAST CREATE ROOM");
+		
+		rebroadcastBtn.click(function(evt) {
+			that.main.reBroadcastLastMessage();
+		})
+	
+		
+		this.broadcastReplyTable = table;
+		
+		divcontainer.append(h2).append(rebroadcastBtn).append(tablecontainer);
+		$("#content").html(divcontainer);
+	}
+	
+	this.addNewBroadcastMessage = function(msg) {
+		d = new Date();
+		hour = d.getHours().toString();
+		minute = d.getMinutes().toString();
+		second = d.getSeconds().toString();
+		
+		tr = $("<tr>");
+		tdtime = $("<td>").text(hour + ":" + minute + ":" + second)
+		td = $("<td>").text(msg);
+		tr.append(tdtime)
+		tr.append(td)
+		
+		this.broadcastReplyTable.prepend(tr);	
+	}
+	
 	//$("#chatbox").hide();
 }
 
@@ -38,7 +110,7 @@ Main = function() {
 	this.connect = new Connect(this);
 	this.onSocketDisconnect = function() {
 		$("#thickbox").show();
-		$("#thickbox-message").text("O")
+		$("#thickbox-message").text("Disconnected")
 	}
 	
 	this.chats = [];
@@ -98,12 +170,30 @@ Main = function() {
 			peerChatIns = this.getChatInstance(chatPeer);
 			peerChatIns.onMessageReceived(chatMessage);
 		}
+		
+		if (msg.trim() == "NEW_ROOM BROADCAST DONE") {
+			this.dashboard.createBroadcastReplyDOM();
+		}
+		
+		if (msg.substr(0,13) == "NEW_BROADCAST") {
+			msg = msg.substr(14);
+			this.dashboard.addNewBroadcastMessage(msg);
+		}
 
 	};
 	
 	this.sendChat = function(peer, msg) {
 		this.connect.sendMessage("CHAT " + peer + " " + msg)
 	}
+	
+	this.createRoom = function(roomName) {
+		this.connect.sendMessage("CREATE_ROOM " + roomName);
+	}
+	
+	this.reBroadcastLastMessage = function() {
+		this.connect.sendMessage("REBROADCAST");
+	}
+	
 	
 	this.onPlayerMove = function(move) {
 		this.connect.sendMessage("GAME PLAYER_MOVE " + move.toString())
@@ -113,8 +203,9 @@ Main = function() {
 		
 	}
 	
-	$("#create-room-btn").click(function(evt){ 
-		
+	that = this
+	$("#create-room-form-btn").click(function(evt){ 
+		that.dashboard.createNewRoomDOM();
 	});
 
 	$("#join-room-btn").click(function(evt){ 
