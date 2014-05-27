@@ -173,7 +173,7 @@ class Network:
 
             
     def startNetwork(self):
-        self.broadcaster = UDPBroadcaster(("192.168.12.255", 1210), self)
+        self.broadcaster = UDPBroadcaster(("192.168.41.255", 1210), self)
         reactor.listenUDP(1210, self.broadcaster)
 
         self.websocketFactory = WebSocketServerFactory("ws://localhost:9000", debug = False)
