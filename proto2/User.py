@@ -35,7 +35,12 @@ class AsyncUser(User):
 	
 	
 	def onNewBroadcastReceived(self, msgTuple):
-		self.webclient.sendMessage("NEW_BROADCAST " + str(msgTuple) )	
+		datagram,peerAddressPort = msgTuple;
+						
+		if "JOIN_ROOM" in datagram:
+			self.main.connectPeer(peerAddressPort[0], peerAddressPort[1]);
+
+			self.webclient.sendMessage("JOIN_ROOM " + str(msgTuple) )
 	
 	def onPeerListChange(self):
 		print "Sending Peer List to webclient"
@@ -61,6 +66,11 @@ class AsyncUser(User):
 		
 		if "CHAT" in msg:
 			self.onChatMessage(peerIdentity, msg[5:])
+
+		
+		if "JOIN_ROOM" in msg:
+			self.webclient.sendMessage("JOIN_ROOM " + peerIdentity + " " + msg)
+		
 		print "AsyncUser treating TCP msg: " + msg
 
 	

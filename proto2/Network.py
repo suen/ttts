@@ -1,5 +1,5 @@
 
-from twisted.internet.protocol import DatagramProtocol, Factory
+from twisted.internet.protocol import DatagramProtocol, Factory,ClientFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import reactor
 from twisted.python import log
@@ -65,7 +65,7 @@ class MyTCPProtocol(LineReceiver):
         self.peerName = ""
 
     def connectionMade(self):
-        self.sendLine("Please connect yourself with your 'CONNECT <yourname>'")
+        self.sendLine("CONNECT " + Network.Instance().main.username)
         pass
 
     def connectionLost(self, reason):
@@ -79,7 +79,7 @@ class MyTCPProtocol(LineReceiver):
     def lineReceived(self, line):       
         print "TCP received: " + line
         
-        if "CONNECT" in line:         
+        if "CONNECT " in line:         
             space_index = line.find(" ")
             peerName = line[space_index+1:]
             if len(peerName) > 30:
@@ -92,6 +92,15 @@ class MyTCPProtocol(LineReceiver):
             #self.sendLine("welcome '" + peerName + "', You have been added to my list. There are currently " 
             #              + str(peerCount) + " in my list, Welcome abroad")
             self.sendLine("CONNECT_OK " + Network.Instance().main.username)
+        elif "CONNECT_OK" in line:
+            space_index = line.find(" ")
+            peerName = line[space_index+1:]
+            if len(peerName) > 30:
+                return
+            
+            peerCount = len(Network.Instance().getPeers())
+            self.peerName = str(peerCount) + "_" + peerName
+            Network.Instance().addPeer(self.peerName, self)            
         else:
             self.onLineReceived(self.peerName, line);
             
@@ -172,8 +181,14 @@ class Network:
         reactor.listenTCP(9000,self.websocketFactory)
         
         reactor.listenTCP(1210, MyTCPProtocolFactory())
+
+        self.clientFactory = ClientFactory();
+        self.clientFactory.protocol = MyTCPProtocol
         
         reactor.run()
+
+    def connectPeer(self, address, port):
+        reactor.connectTCP(address, port, self.clientFactory);
 
     def treat(self, peer, msg):
         print msg

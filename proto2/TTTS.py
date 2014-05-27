@@ -20,7 +20,7 @@ class Main:
         self.startGame = False
         self.board_sent_to_player = False
         self.user = AsyncUser(self)
-        self.userName = "Daubajee"
+        self.username = "Daubajee"
         self.broadcastReceived = []
         self.lastBroadcastedMsg = ""
 
@@ -41,6 +41,9 @@ class Main:
             
     def startNetwork(self):
         self.net.startNetwork()
+
+    def connectPeer(self, address, port):
+        self.net.connectPeer(address, port);
 
     def setWebClient(self, client):
         self.user.setWebClient(client);
