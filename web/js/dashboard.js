@@ -97,6 +97,30 @@ Dashboard = function(main) {
 		this.broadcastReplyTable.prepend(tr);	
 	}
 	
+	this.joinRoomDOM = function() {
+		divcontainer = $("<div>")
+		h2 = $("<h2>").text("Join Room")
+		h4 = $("<h4>").text("Listening to NEW_GAME broadcast")
+		tablecontainer = $("<div>").attr("class", "broadcast-reply-table-container");
+		table = $("<table>").attr("class", "table");
+		
+		this.broadcastReceivedTable = table;
+		divcontainer.append(h2).append(h4).append(tablecontainer);
+		$("#content").html(divcontainer);		
+	}
+	this.broadcastReceivedTable = null;
+	this.onNewRoomBroadcastReceived = function(broadcastmsg){
+		Logger.log(broadcastmsg);
+		console.log(broadcastmsg);
+		tr = $("<tr>");
+		tdtime = $("<td>").text(hour + ":" + minute + ":" + second)
+		td = $("<td>").text(msg);
+		tr.append(tdtime)
+		tr.append(td)
+		
+		this.broadcastReceivedTable.prepend(tr);	
+	}
+	
 	//$("#chatbox").hide();
 }
 
@@ -179,7 +203,11 @@ Main = function() {
 			msg = msg.substr(14);
 			this.dashboard.addNewBroadcastMessage(msg);
 		}
-
+		
+		if (msg.substr(0,8) = "NEW_ROOM") {
+			msg = msg.substr(9)
+			this.dashboard.onNewRoomBroadcastReceived(msg);
+		}
 	};
 	
 	this.sendChat = function(peer, msg) {
@@ -208,8 +236,8 @@ Main = function() {
 		that.dashboard.createNewRoomDOM();
 	});
 
-	$("#join-room-btn").click(function(evt){ 
-		
+	$("#join-room-btn").click(function(evt){
+		that.dashboard.joinRoomDOM();
 	});	
 	
 }

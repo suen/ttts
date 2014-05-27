@@ -36,11 +36,10 @@ class AsyncUser(User):
 	
 	def onNewBroadcastReceived(self, msgTuple):
 		datagram,peerAddressPort = msgTuple;
-						
-		if "JOIN_ROOM" in datagram:
+			
+		if "NEW_ROOM" in datagram:
 			self.main.connectPeer(peerAddressPort[0], peerAddressPort[1]);
-
-			self.webclient.sendMessage("JOIN_ROOM " + str(msgTuple) )
+			self.webclient.sendMessage("NEW_ROOM " + str(msgTuple) )
 	
 	def onPeerListChange(self):
 		print "Sending Peer List to webclient"
