@@ -5,26 +5,50 @@ Created on May 17, 2014
 '''
 
 from Network import Network,BroadcastListener
+from twisted.internet import reactor
 from Game import TicTacToe
 from Player import AI, AsyncPlayer
 from User import AsyncUser
-import time, sys
+import time, sys, signal
 from threading import Thread
+from ConfigParser import ConfigParser
 
 class Main:
     def __init__(self):
+        config = ConfigParser()
+        config.read("config.ini")
+        
+        self.username = config.get('user', 'username');
+        self.broadcastAddress = config.get('network', 'broadcastAddress')
+        self.UDPPort = int(config.get('network', 'UDPPort'))
+        self.TCPPort = int(config.get('network', 'TCPPort'))
+        self.WebSocketPort = int(config.get('network', 'WebSocketPort'))
+        
         self.breceiver = BroadcastListener(self)
+        
         self.net = Network.Instance()
+        self.net.setBroadcastAddress(self.broadcastAddress)
+        self.net.setUDPPort(self.UDPPort)
+        self.net.setTCPPort(self.TCPPort)
+        self.net.setWebSocketPort(self.WebSocketPort)
         self.net.setMain(self)
+
         self.webClient = None;
         self.startGame = False
         self.board_sent_to_player = False
         self.user = AsyncUser(self)
-        self.username = "Daubajee"
+
         self.broadcastReceived = []
         self.lastBroadcastedMsg = ""
+            
+        signal.signal(signal.SIGINT, self.signal_handler)
 
-        #self.new_game_init()
+        self.die = False
+        self.gameLoopThread = Thread(target=self.run)
+        self.gameLoopThread.start()
+        
+        self.startNetwork()
+
 
     def new_game_init(self):
         print "New Game initializing"
@@ -41,7 +65,8 @@ class Main:
             
     def startNetwork(self):
         self.net.startNetwork()
-
+        self.die = True
+        
     def connectPeer(self, address, port):
         self.net.connectPeer(address, port);
 
@@ -87,7 +112,9 @@ class Main:
         while (self.net is None or 
                 self.webClient is None or 
                 not self.startGame ):
-            print "no work thread sleeping"
+            print "No game, GameLoopThread sleeping"
+            if self.die:
+                return
             time.sleep(1)
         
         #self.net.sendDataWebPeers("GAME BOARDSTATE " + str(self.game.board.board))    
@@ -121,14 +148,15 @@ class Main:
         
         time.sleep(1)
         self.run()
-        
 
-def main():
-    m = Main()
-    Thread(target=m.run).start()
-    m.startNetwork()
+    def signal_handler(self, signal, frame):
+        print 'KeyBoard Interrupt',signal
+        print 'Graceful Exit'
+        self.die = True
+        reactor.callFromThread(reactor.stop)
+
 
 
 if __name__ == '__main__':
-    main()
-
+    m = Main()
+    

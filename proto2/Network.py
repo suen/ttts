@@ -1,6 +1,7 @@
 
 from twisted.internet.protocol import DatagramProtocol, Factory,ClientFactory
 from twisted.protocols.basic import LineReceiver
+from twisted.internet.error import CannotListenError
 from twisted.internet import reactor
 from twisted.python import log
 import time
@@ -84,6 +85,10 @@ class MyTCPProtocol(LineReceiver):
             peerName = line[space_index+1:]
             if len(peerName) > 30:
                 return
+            
+            if peerName == Network.Instance().main.username:
+                return
+            
             peerCount = len(Network.Instance().getPeers())
             
             self.peerName = str(peerCount) + "_" + peerName
@@ -170,22 +175,38 @@ class Network:
 
     def getPeers(self):
         return self.peers
-
+    
+    def setBroadcastAddress(self, broadcastAddress):
+        self.broadcastAddress = broadcastAddress;
+    
+    def setUDPPort(self, udpPort):
+        self.udpPort = udpPort;
+        
+    def setTCPPort(self, tcpPort):
+        self.tcpPort = tcpPort;
+        
+    def setWebSocketPort(self, wsocketPort):
+        self.wsocketPort = wsocketPort
             
     def startNetwork(self):
-        self.broadcaster = UDPBroadcaster(("192.168.41.255", 1210), self)
-        reactor.listenUDP(1210, self.broadcaster)
-
-        self.websocketFactory = WebSocketServerFactory("ws://localhost:9000", debug = False)
-        self.websocketFactory.protocol = MyWebSocketServerProtocol 
-        reactor.listenTCP(9000,self.websocketFactory)
+        try:
+            self.broadcaster = UDPBroadcaster((self.broadcastAddress, self.udpPort), self)
+            reactor.listenUDP(self.udpPort, self.broadcaster)
+    
+            self.websocketFactory = WebSocketServerFactory("ws://localhost:" + str(self.wsocketPort), debug = False)
+            self.websocketFactory.protocol = MyWebSocketServerProtocol 
+            reactor.listenTCP(self.wsocketPort,self.websocketFactory)
+            
+            reactor.listenTCP(self.tcpPort, MyTCPProtocolFactory())
+    
+            self.clientFactory = ClientFactory();
+            self.clientFactory.protocol = MyTCPProtocol
         
-        reactor.listenTCP(1210, MyTCPProtocolFactory())
+            reactor.run()
+        except CannotListenError:
+            print "Cannot listen to " + str(self.udpPort) + " or " + str(self.tcpPort) + " .. exiting "
 
-        self.clientFactory = ClientFactory();
-        self.clientFactory.protocol = MyTCPProtocol
         
-        reactor.run()
 
     def connectPeer(self, address, port):
         reactor.connectTCP(address, port, self.clientFactory);
