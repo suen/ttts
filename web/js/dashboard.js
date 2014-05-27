@@ -204,7 +204,7 @@ Main = function() {
 			this.dashboard.addNewBroadcastMessage(msg);
 		}
 		
-		if (msg.substr(0,8) = "NEW_ROOM") {
+		if (msg.substr(0,8) == "NEW_ROOM") {
 			msg = msg.substr(9)
 			this.dashboard.onNewRoomBroadcastReceived(msg);
 		}

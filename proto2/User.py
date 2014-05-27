@@ -63,6 +63,8 @@ class AsyncUser(User):
 	
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
+		print "PRINTING PEER MSG::" + msg + " from: " + peerIdentity
+		
 		if "CHAT" in msg:
 			self.onChatMessage(peerIdentity, msg[5:])
 
@@ -80,12 +82,14 @@ class AsyncUser(User):
 			self.onPeerListChange()
 			
 		if "CHAT" in msg:
+			print msg
 			msg = msg[5:]
 			id_peer = int(msg[0: msg.find("_")])			
 			
 			msg = msg[msg.find(" ")+1:]
 			
 			peers = self.main.getPeerList()
+			
 			peers[id_peer][1].sendLine("CHAT " + msg);
 			
 		if "CREATE_ROOM" in msg:

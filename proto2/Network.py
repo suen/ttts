@@ -89,23 +89,24 @@ class MyTCPProtocol(LineReceiver):
             if peerName == Network.Instance().main.username:
                 return
             
-            peerCount = len(Network.Instance().getPeers())
+            #peerCount = len(Network.Instance().getPeers())
             
-            self.peerName = str(peerCount) + "_" + peerName
+            #self.peerName = str(peerCount) + "_" + peerName
             
-            Network.Instance().addPeer(self.peerName, self)
+            Network.Instance().addPeer(peerName, self)
             #self.sendLine("welcome '" + peerName + "', You have been added to my list. There are currently " 
             #              + str(peerCount) + " in my list, Welcome abroad")
             self.sendLine("CONNECT_OK " + Network.Instance().main.username)
+        
         elif "CONNECT_OK" in line:
             space_index = line.find(" ")
             peerName = line[space_index+1:]
             if len(peerName) > 30:
                 return
             
-            peerCount = len(Network.Instance().getPeers())
-            self.peerName = str(peerCount) + "_" + peerName
-            Network.Instance().addPeer(self.peerName, self)            
+            #peerCount = len(Network.Instance().getPeers())
+            #self.peerName = str(peerCount) + "_" + peerName
+            Network.Instance().addPeer(peerName, self)            
         else:
             self.onLineReceived(self.peerName, line);
             
@@ -163,10 +164,11 @@ class Network:
         for (n,p) in self.peers:
             if p == peer:
                 return
-
+        peerCount = len(self.getPeers())
+        peer.peerName = str(peerCount)+ "_" + name
         peer.onLineReceived = self.main.onPeerMsgReceived
-        self.peers.append((name, peer))
-        print "new peer"+ str((name, peer))
+        self.peers.append((peer.peerName, peer))
+        print "new peer"+ str((peer.peerName, peer))
         self.main.onPeerListChange()
 
     def removePeer(self, name, peer):
