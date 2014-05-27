@@ -159,12 +159,15 @@ class Network:
     def removeWebClient(self, webclient):
         self.setWebClient(webclient)
 
-    def addPeer(self, name, peer):
-        if (name, peer) not in self.peers:
-            peer.onLineReceived = self.main.onPeerMsgReceived
-            self.peers.append((name, peer))
-            print "new peer"+ str((name, peer))
-            self.main.onPeerListChange()
+    def addPeer(self, name, peer):        
+        for (n,p) in self.peers:
+            if p == peer:
+                return
+
+        peer.onLineReceived = self.main.onPeerMsgReceived
+        self.peers.append((name, peer))
+        print "new peer"+ str((name, peer))
+        self.main.onPeerListChange()
 
     def removePeer(self, name, peer):
         print "Remove Peer initialized"
