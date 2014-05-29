@@ -35,11 +35,13 @@ class AsyncUser(User):
 	
 	
 	def onNewBroadcastReceived(self, msgTuple):
-		datagram,peerAddressPort = msgTuple;
-			
+		broadcastingPeer,datagram = msgTuple;
+		
+		print "Sending Datagram to webclient " + datagram;
 		if "NEW_ROOM" in datagram:
-			self.main.connectPeer(peerAddressPort[0], peerAddressPort[1]);
-			self.webclient.sendMessage("NEW_ROOM " + str(msgTuple) )
+			self.webclient.sendMessage(datagram + " " + broadcastingPeer )
+		else:
+			print "BROADCAST RECEIVED, msgType not implemented: " + datagram
 	
 	def onPeerListChange(self):
 		print "Sending Peer List to webclient"
@@ -70,7 +72,8 @@ class AsyncUser(User):
 
 		
 		if "JOIN_ROOM" in msg:
-			self.webclient.sendMessage("JOIN_ROOM " + peerIdentity + " " + msg)
+			room = msg[10:]
+			self.webclient.sendMessage("JOIN_ROOM " + peerIdentity + " " + room)
 		
 		print "AsyncUser treating TCP msg: " + msg
 
@@ -99,6 +102,19 @@ class AsyncUser(User):
 		
 		if "REBROADCAST" in msg:
 			self.main.reBroadcastLastMsg()
+		
+		if "JOIN_ROOM" in msg:
+			print msg
+			msg = msg[10:]
+			
+			roomName = msg[0:msg.find(" ")]
+			msg = msg[msg.find(" ")+1:].strip()
+			id_peer = int(msg[0: msg.find("_")])			
+			peers = self.main.getPeerList()
+			
+			peers[id_peer][1].sendLine("JOIN_ROOM " + roomName);
+			
+
 			
 		#	for peer in peers:
 		#		peer[1].sendLine(msg)

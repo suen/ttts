@@ -86,9 +86,17 @@ class Main:
         self.user.onPeerMsgReceived(peerIdentity, msg)
     
     def onBroadcastReceived(self, msgTuple):
+        datagram,peerIdentity = msgTuple;
+        
+        broadcastingPeer = self.net.getPeerByIP(peerIdentity[0])
+        
+        if broadcastingPeer is None:
+            self.connectPeer(peerIdentity[0], peerIdentity[1]);
+            return
+        
         if msgTuple not in self.broadcastReceived:
-            self.broadcastReceived.append(msgTuple)
-            self.user.onNewBroadcastReceived(msgTuple)              
+            #self.broadcastReceived.append(msgTuple)
+            self.user.onNewBroadcastReceived((broadcastingPeer.peerName, datagram))              
             
     def setOpponentPlayer(self, opponent):
         self.player2 = opponent
@@ -115,7 +123,7 @@ class Main:
             print "No game, GameLoopThread sleeping"
             if self.die:
                 return
-            time.sleep(1)
+            time.sleep(10)
         
         #self.net.sendDataWebPeers("GAME BOARDSTATE " + str(self.game.board.board))    
         

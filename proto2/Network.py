@@ -71,7 +71,7 @@ class MyTCPProtocol(LineReceiver):
 
     def connectionLost(self, reason):
         print "Peer disconnected"
-        Network.Instance().removePeer(self.peerName, self)
+        Network.Instance().removePeer(self)
 
     def onLineReceived(self, peerIdentity, line):
         print "No TCP Listeners implemented for msg by " + peerIdentity + " >>> " + line
@@ -81,7 +81,7 @@ class MyTCPProtocol(LineReceiver):
         print "TCP received: " + line
         
         if "CONNECT " in line:         
-            space_index = line.find(" ")
+            space_index = line.find(" ")    
             peerName = line[space_index+1:]
             if len(peerName) > 30:
                 return
@@ -161,22 +161,29 @@ class Network:
         self.setWebClient(webclient)
 
     def addPeer(self, name, peer):        
-        for (n,p) in self.peers:
+        for (n,p,ip) in self.peers:
             if p == peer:
                 return
         peerCount = len(self.getPeers())
         peer.peerName = str(peerCount)+ "_" + name
         peer.onLineReceived = self.main.onPeerMsgReceived
-        self.peers.append((peer.peerName, peer))
-        print "new peer"+ str((peer.peerName, peer))
+        self.peers.append((peer.peerName, peer, peer.transport.getPeer().host))
+        print "new peer"+ str((peer.peerName, peer.transport.getPeer().host))
         self.main.onPeerListChange()
 
-    def removePeer(self, name, peer):
+    def removePeer(self, peer):
         print "Remove Peer initialized"
-        if (name, peer) in self.peers:
-            self.peers.remove((name, peer))
-            print("peer removed " + str((name, peer)))
-            self.main.onPeerListChange()
+        for (n, p, ip) in self.peers:
+            if p == peer:
+                self.peers.remove((n, p, ip))
+                print("peer removed " + str((n, ip)))
+                self.main.onPeerListChange()
+    
+    def getPeerByIP(self, ip):
+        for (n, p, i) in self.peers:
+            if i == ip:
+                return p
+        return None
 
     def getPeers(self):
         return self.peers

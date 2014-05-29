@@ -82,7 +82,7 @@ Dashboard = function(main) {
 		$("#content").html(divcontainer);
 	}
 	
-	this.addNewBroadcastMessage = function(msg) {
+	this.addNewBroadcastReply = function(msg) {
 		d = new Date();
 		hour = d.getHours().toString();
 		minute = d.getMinutes().toString();
@@ -105,6 +105,7 @@ Dashboard = function(main) {
 		table = $("<table>").attr("class", "table");
 		
 		this.broadcastReceivedTable = table;
+		tablecontainer.append(table)
 		divcontainer.append(h2).append(h4).append(tablecontainer);
 		$("#content").html(divcontainer);		
 	}
@@ -112,11 +113,32 @@ Dashboard = function(main) {
 	this.onNewRoomBroadcastReceived = function(broadcastmsg){
 		Logger.log(broadcastmsg);
 		console.log(broadcastmsg);
+		
+		newRoomMsgs = broadcastmsg.split(" ");
+		roomName = newRoomMsgs[0];
+		peerId = newRoomMsgs[1];
+		peerName = peerId.substr(peerId.indexOf("_")+1);
+		
 		tr = $("<tr>");
-		tdtime = $("<td>").text(hour + ":" + minute + ":" + second)
-		td = $("<td>").text(msg);
+		tdtime = $("<td>").text(hour + ":" + minute + ":" + second);
+		td = $("<td>").text("Room: " +roomName + " peer: " + peerName);
+		
+		joinBtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
+		joinBtn.text("Join Room");
+		
+		dashboard = this
+		joinBtn.click(function() {
+			ref = $(this).attr("ref");
+			newRoomMsgs = ref.split(" ");
+			roomName = newRoomMsgs[0];
+			peerId = newRoomMsgs[1];
+			dashboard.main.joinRoom(peerId, roomName);
+		});
+		
+		tdb = $("<td>").append(joinBtn)
 		tr.append(tdtime)
 		tr.append(td)
+		tr.append(tdb)
 		
 		this.broadcastReceivedTable.prepend(tr);	
 	}
@@ -199,9 +221,9 @@ Main = function() {
 			this.dashboard.createBroadcastReplyDOM();
 		}
 		
-		if (msg.substr(0,13) == "NEW_BROADCAST") {
-			msg = msg.substr(14);
-			this.dashboard.addNewBroadcastMessage(msg);
+		if (msg.substr(0,9) == "JOIN_ROOM") {
+			msg = msg.substr(10);
+			this.dashboard.addNewBroadcastReply(msg);
 		}
 		
 		if (msg.substr(0,8) == "NEW_ROOM") {
@@ -216,6 +238,10 @@ Main = function() {
 	
 	this.createRoom = function(roomName) {
 		this.connect.sendMessage("CREATE_ROOM " + roomName);
+	}
+	
+	this.joinRoom = function(peer, roomName) {
+		this.connect.sendMessage("JOIN_ROOM " + roomName + " " + peer)
 	}
 	
 	this.reBroadcastLastMessage = function() {
