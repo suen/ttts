@@ -27,13 +27,14 @@ function createChatDOM(peer, evntListener) {
 	
 }
 
-Chat = function(peer, main) {
+Chat = function(peer) {
+	
 	chatbox = $("<div>");
 	chatbox.attr("class", "chatbox");
 	winHeight = window.innerHeight;
 	winWidth = window.width;
 	chatTopMargin = winHeight - 300;
-	chatBoxCount = main.chats.length;
+	chatBoxCount = Object.keys(Chat.list).length;
 	chatbox.css("margin-top", chatTopMargin.toString() + "px")
 	chatbox.css("margin-left", ((chatBoxCount*210)+100).toString() +"px")
 	
@@ -41,7 +42,7 @@ Chat = function(peer, main) {
 	chatboxTitle.attr("class", "title")
 	
 	chatboxh4 = $("<h4>");
-	chatboxh4.text("Chat - " + peer.substr(peer.indexOf("_")+1));
+	chatboxh4.text("Chat - " + peer.getName());
 	
 	closeButton = $("<button>")
 	closeButton.attr("class", "control")
@@ -111,7 +112,7 @@ Chat = function(peer, main) {
 	}
 	
 	this.onMessageReceived = function(chatmsg) {
-		p = $("<p>").text(peer.substr(peer.indexOf("_")+1) + ": " + chatmsg);
+		p = $("<p>").text(peer.getName() + ": " + chatmsg);
 		chatStream.append(p)
 
 		display = chatbox.css("display")
@@ -124,9 +125,9 @@ Chat = function(peer, main) {
 	this.chatbox = chatbox
 	
 	this.showChatBox = function() {
-		console.log("showing box")
+//		console.log("showing box")
 		display = this.chatbox.css("display")
-		console.log(display)
+//		console.log(display)
 		if(display.toLowerCase()=="none") {
 			this.chatbox.show();
 		}	
@@ -137,21 +138,28 @@ Chat = function(peer, main) {
 		txtField = $(this).prev();
 		chatmsg = txtField.val();
 		txtField.val("");
-		
-//		chatmsg = chatText.val();
-//		chatText.val("");
 
 		p = $("<p>").text("Me: " + chatmsg);
 		
 		myChatStream = $(this).parent().prev()
 		
 		myChatStream.append(p)
-		main.sendChat(peer, chatmsg)
+		Main.Instance().sendChat(peer, chatmsg);
 	});
 
 		
 	chatbox.show();
 	Logger.log("new Chat instance for " + peer + " created")
+}
+
+Chat.list = {};
+
+Chat.getChat = function(peer) {
+	peerId = peer.getId();
+	
+	if (!(peerId in Chat.list)) 
+		Chat.list[peerId] = new Chat(peer);
+	return Chat.list[peerId]
 }
 
 
@@ -191,4 +199,60 @@ Connect = function(listener) {
 	};
 
 	Logger.log("Connect initializing");
+}
+
+Peer = function(peerid) {
+	this.id = peerid;
+	
+	this.getName = function() {
+		return this.id.substr(this.id.indexOf("_")+1);
+	}
+	
+	this.getId = function() {
+		return this.id;
+	}
+};
+
+Peer.list = {};
+
+Message = function(msg) {
+	
+	this.msg = msg;
+	
+	this.parse = function() {
+		msg = this.msg + "    ";
+		s1 = msg.indexOf(" ");
+		s2 = msg.indexOf(" ", s1+1);
+	
+		sendId = msg.substr(0, s1);
+		this.prefix = msg.substr(s1+1, s2-s1-1);
+		this.content = msg.substr(s2+1).trim();
+		
+		this.sender = new Peer(sendId)
+	}
+	
+	this.getPrefix = function() {
+		return this.prefix;
+	}
+	
+	this.getSender = function() {
+		return this.sender;
+	}
+	
+	this.getContent = function() {
+		return this.content;
+	}
+		
+	this.parse();
+	
+}
+
+Message.create = function(recipient, prefix, detail) {
+	if (typeof(recipient) == "object") {
+		receiver = recipient.getId();
+	} else {
+		receiver = recipient;
+	}
+	
+	return receiver + " " + prefix + " " + detail;
 }

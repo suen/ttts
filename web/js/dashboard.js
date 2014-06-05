@@ -8,14 +8,15 @@ Dashboard = function(main) {
 
 	this.addNewPeer = function(peer) {
 		
-		td = $("<td>").text(peer.substr(peer.indexOf("_")+1));
-		td.attr("ref", peer);
+		td = $("<td>").text(peer.getName());
+		td[0]['peer'] = peer;
 		tr = $("<tr>");
 		tr.append(td);
 		
 		td.click(function(evt){
-			id_peer = $(this).attr("ref");
-			main.showChatBox(id_peer);
+			console.log("clicked")
+			peer = this['peer'];
+			Chat.getChat(peer).showChatBox();
 		});
 		
 		this.peerListTableNode.append(tr);
@@ -23,6 +24,13 @@ Dashboard = function(main) {
 	
 	this.erasePeerList = function(peer) {
 		this.peerListTableNode.text("");	
+	}
+	
+	this.peerListUpdate = function() {
+		this.erasePeerList();
+		for (p in Peer.list) {
+			this.addNewPeer(Peer.list[p]);
+		}
 	}
 	
 	this.createNewRoomDOM = function() {
@@ -53,66 +61,68 @@ Dashboard = function(main) {
 		
 		$("#content").append(divcontainer)
 		
-		that = this
 		createButton.click(function(evt) {
 			roomName = $(this).parent().parent().prev().children().last().children().val()
-			that.main.createRoom(roomName);
+			Main.Instance().createRoom(roomName);
 		});
 	}
 	
 	this.broadcastReplyTable = null;
-	this.createBroadcastReplyDOM = function(){
+	this.createRoomJoinListenerDOM = function(roomName){
 		divcontainer = $("<div>")
-		h2 = $("<h2>").text("Broadcast Reply")
+		h2 = $("<h2>").text("New Room Join request")
 		tablecontainer = $("<div>").attr("class", "broadcast-reply-table-container");
 		table = $("<table>").attr("class", "table");
 
 		tablecontainer.append(table)
 		
-		rebroadcastBtn = $("<button>").text("RE-BROADCAST CREATE ROOM");
+		rebroadcastBtn = $("<button>").text("RE-BROADCAST");
+		startGameBtn = $("<button>").text("START GAME");
+		startGameBtn[0]['room'] = roomName
+		
 		
 		rebroadcastBtn.click(function(evt) {
-			that.main.reBroadcastLastMessage();
+			Main.Instance().reBroadcastLastMessage();
 		})
-	
+		
+		startGameBtn.click(function(evt){
+			roomName = this['room']
+			Main.Instance().sendStartGame(roomName)
+		})	
 		
 		this.broadcastReplyTable = table;
 		
-		divcontainer.append(h2).append(rebroadcastBtn).append(tablecontainer);
+		divcontainer.append(h2).append(rebroadcastBtn).append(startGameBtn).append(tablecontainer);
 		$("#content").html(divcontainer);
 	}
 	
-	this.addNewBroadcastReply = function(msg) {
+	this.addNewBroadcastReply = function(peer, roomName) {
 		d = new Date();
 		hour = d.getHours().toString();
 		minute = d.getMinutes().toString();
 		second = d.getSeconds().toString();
+	
 		
-		msgde = msg.split(" ")
-		peerId = msgde[0]
-		roomName = msgde[1]
-		
-		acceptBtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
+		acceptBtn = $("<button>").attr("class", "btn btn-primary btn-success");
 		acceptBtn.text("Accept");
+		acceptBtn[0]['room'] = roomName;
+		acceptBtn[0]['peer'] = peer
 
-		canWatchBtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
+		canWatchBtn = $("<button>").attr("class", "btn btn-primary btn-success");
 		canWatchBtn.text("Can Watch");
+		canWatchBtn[0]['room'] = roomName;
+		canWatchBtn[0]['peer'] = peer
 		
-		dashboard = this
 		acceptBtn.click(function() {
-			ref = $(this).attr("ref");
-			newRoomMsgs = ref.split(" ");
-			roomName = newRoomMsgs[0];
-			peerId = newRoomMsgs[1];
-			dashboard.main.acceptPeer(peerId, roomName);
+			roomName = this['room'];
+			peer = this['peer'];
+			Main.Instance().acceptPeer(peer, roomName);
 		});
 		
 		canWatchBtn.click(function() {
-			ref = $(this).attr("ref");
-			newRoomMsgs = ref.split(" ");
-			roomName = newRoomMsgs[0];
-			peerId = newRoomMsgs[1];
-			dashboard.main.canWatchPeer(peerId, roomName);
+			roomName = this['room'];
+			peer = this['peer'];
+			Main.Instance().canWatchPeer(peer, roomName);
 		});
 		
 		tr = $("<tr>");
@@ -139,29 +149,24 @@ Dashboard = function(main) {
 		$("#content").html(divcontainer);		
 	}
 	this.broadcastReceivedTable = null;
-	this.onNewRoomBroadcastReceived = function(broadcastmsg){
-		Logger.log(broadcastmsg);
-		console.log(broadcastmsg);
-		
-		newRoomMsgs = broadcastmsg.split(" ");
-		roomName = newRoomMsgs[0];
-		peerId = newRoomMsgs[1];
-		peerName = peerId.substr(peerId.indexOf("_")+1);
+	this.onNewRoomBroadcastReceived = function(peer, roomName){
 		
 		tr = $("<tr>");
 		tdtime = $("<td>").text(hour + ":" + minute + ":" + second);
-		td = $("<td>").text("Room: " +roomName + " peer: " + peerName);
 		
-		joinBtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
+		td = $("<td>").text("Room: " +roomName + " peer: " + peer.getName());
+		
+		joinBtn = $("<button>").attr("class", "btn btn-primary btn-success");
+		joinBtn[0]['peer'] = peer;
+		joinBtn[0]['room'] = roomName;
 		joinBtn.text("Join Room");
 		
 		dashboard = this
 		joinBtn.click(function() {
-			ref = $(this).attr("ref");
-			newRoomMsgs = ref.split(" ");
-			roomName = newRoomMsgs[0];
-			peerId = newRoomMsgs[1];
-			dashboard.main.joinRoom(peerId, roomName);
+			peer = this['peer'];
+			roomName = this['room']
+			console.log(this)
+			dashboard.main.joinRoom(peer, roomName);
 		});
 		
 		tdb = $("<td>").append(joinBtn)
@@ -172,8 +177,8 @@ Dashboard = function(main) {
 		this.broadcastReceivedTable.prepend(tr);	
 	}
 	
-	this.roomAcceptedDOM = function(roomName, peerId, type) {
-		
+	this.roomAcceptedDOM = function(roomName, peer, type) {
+		console.log(peer)
 		if (type == "PLAY") {
 			displayText = "You have been accepted to PLAY in '";
 		} 
@@ -181,7 +186,7 @@ Dashboard = function(main) {
 			displayText = "You have been accepted to WATCH the play in '"
 		}
 		
-		displayText += roomName + "' by '" + peerId + "'"
+		displayText += roomName + "' by '" + peer.getName() + "'"
 		
 		Logger.log(displayText)
 		divcontainer = $("<div>")
@@ -189,36 +194,34 @@ Dashboard = function(main) {
 
 		divaccepted = $("<div>").attr("class", "small-container");
 
-		startGamebtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
-		startGamebtn.text("Start Game");
+		readyBtn = $("<button>").attr("class", "btn btn-primary btn-success")
+		readyBtn.text("Ready");
 		divaccepted.append($("<p>").css("text-align", "center")
 				.text(displayText)
 		)
-		divaccepted.append($("<p>").css("text-align", "center").append(startGamebtn));
+		divaccepted.append($("<p>").css("text-align", "center").append(readyBtn));
 		
 		dashboard = this;
-		startGamebtn.click(function(evt) {
+		readyBtn.click(function(evt) {
 			$(this).text("Waiting..")
 			$(this).prop('disabled', true);
-			dashboard.main.startGame(peerId, roomName)
+			Main.Instance().readyForGame(peer, roomName)
 		});
 		
 		divcontainer.append(h2).append(divaccepted)
 		$("#content").html(divcontainer);		
 	}
 	
-	this.onCanWatch = function(msg) {
-		args = msg.split(" ");
-		this.roomAcceptedDOM(args[1], args[0], "WATCH")
+	this.onCanWatch = function(peer, roomName) {
+		this.roomAcceptedDOM(roomName, peer, "WATCH")
 	}
 
-	this.onAcceptedForRoom = function(msg) {
-		args = msg.split(" ");
-		this.roomAcceptedDOM(args[1], args[0], "PLAY")
+	this.onAcceptedForRoom = function(peer, roomName) {
+		this.roomAcceptedDOM(roomName, peer, "PLAY")
 	}
 	
 	this.createGameDOM = function(msg) {
-		Logger.log("now starting the game");
+		
 	}
 
 	
@@ -227,9 +230,11 @@ Dashboard = function(main) {
 	//$("#chatbox").hide();
 }
 
-Main = function() {
+Main2 = function() {
 
 	this.dashboard = new Dashboard(this);
+	TicTacToe.setMain(this)
+	this.tic = TicTacToe.instance();
 	
 	this.onSocketConnect = function() {
 		this.connect.sendMessage("PEER_LIST");		
@@ -264,6 +269,7 @@ Main = function() {
 		peerChatIns = this.getChatInstance(peerId);
 		peerChatIns.showChatBox()
 	}
+
 	
 	this.onMessageReceived = function(msg) {
 		console.log("Received Msg : " + msg)
@@ -325,7 +331,7 @@ Main = function() {
 		if (msg.substr(0,10)=="START_GAME") {
 			msg = msg.substr(11)
 			if (!this.gameStarted) {
-				this.dashboard.createGameDOM(msg);
+				this.startGame();
 				this.gameStarted = true;
 			} 
 			msg = msg.split(" ");
@@ -341,6 +347,11 @@ Main = function() {
 		}
 		
 	};
+	
+	this.startGame = function() {
+		this.tic.createBoard();
+		this.tic.show();
+	}
 	
 	this.sendChat = function(peer, msg) {
 		this.connect.sendMessage("CHAT " + peer + " " + msg)
@@ -395,11 +406,8 @@ Main = function() {
 	
 }
 
+
+
 //b = [["X", "O", "X", "", "", ""],["", "", "", "O", "", ""],["", "", "", "", "", ""],["", "", "", "", "", ""],["", "", "", "", "", ""],["", "", "", "", "", ""]]
-m = null;
-console.log(m)
-$(document).ready(function() {
-	m = new Main();
-	createChatDOM("peer", m)
-});
+
 

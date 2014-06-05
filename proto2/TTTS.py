@@ -88,6 +88,12 @@ class Main:
         print "calling self.user for peer change"
         self.user.onPeerListChange()
     
+    def sendMessage(self, peerId, message):
+        for (id, p, ip) in self.getPeerList():
+            if id == peerId:
+                p.sendLine(message)
+    
+    
     def onPeerMsgReceived(self, peerIdentity, msg):
         self.user.onPeerMsgReceived(peerIdentity, msg)
     
@@ -121,6 +127,9 @@ class Main:
         print "Rebroadcasting created room " + self.lastroomCreated
         self.net.sendMulticast("NEW_ROOM " + self.lastroomCreated)
 
+    def sendMulticast(self, msg):
+        self.net.sendMulticast(msg)
+        
     def broadcast(self):
         self.net.broadcast();
 

@@ -141,6 +141,18 @@ TicTacToe = function (controller) {
 		return "";		
 	}
 
+	$("#table-container").hide();
+	
+	this.show = function() {
+		$("#content").html($("#table-container"));	
+		$("#table-container").show();
+	}
+	
+	this.hide = function() {
+		$("#table-container").hide();
+		$("body").append($("#table-container"))
+	}
+
 }
 
 TicTacToe.setMain = function(main){
@@ -153,13 +165,14 @@ TicTacToe.instance = function() {
 	return TicTacToe.self
 }
 
+/**
 Main = function() {
 	this.connect = new Connect(this);
 	TicTacToe.setMain(this)
 //	this.tic = new TicTacToe(this);
 	this.tic = TicTacToe.instance();
 	this.tic.createBoard();
-	$("#table-container").hide();
+	
 
 
 	mythis = this
@@ -214,4 +227,6 @@ Main = function() {
 $(document).ready(function() {
 	m = Main();
 });
+
+**/
 

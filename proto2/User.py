@@ -1,6 +1,44 @@
 
 import time;
 
+class WebSocketMessageParseException:
+	pass
+
+class WebSocketMessage:
+
+	def __init__(self, message):
+		pass
+	
+	@staticmethod
+	def parse(message):
+		a = "0_daubajee CHAT hi how you are doing"
+		s1 = message.find(" ")
+		s2 = message.find(" ", s1+1)
+
+		if s1 == -1:
+			raise WebSocketMessageParseException
+		
+		peerIdentity = message[0:s1]
+		prefix = message[s1+1: s2] if s2 > s1+1 else message[s1+1:]
+		content = message[s2+1:] if s2 > s1 else ""
+		return peerIdentity, prefix, content;
+	
+	@staticmethod
+	def create(sender, prefix, content):
+		return "%s %s %s"%(sender,prefix,content);
+	
+
+class PeerMessage:
+	@staticmethod
+	def create(prefix, content):
+		return prefix + " " + content
+
+	@staticmethod
+	def parse(message):
+		s1 = message.find(" ")
+		return message[0:s1], message[s1+1:]
+
+
 class User:
 	def __init__(self):
 		pass
@@ -30,7 +68,7 @@ class AsyncUser(User):
 	def onDuplicateClientMessage(self,msg,isBinary):
 		print "SENDING DUPLICATES MESSAGES TO WEBCLIENTS"
 		for dupli in self.duplicates:
-			dupli.sendMessage("DUPLICATE_WEBCLIENT")
+			dupli.sendMessage("local DUPLICATE_WEBCLIENT")
 		self.duplicates = []
 	
 	
@@ -54,123 +92,90 @@ class AsyncUser(User):
 			if i != len(peers) - 1 :
 				peerString += ","
 		peerString += "}"
-		self.webclient.sendMessage("PEER_LIST " + peerString)
+		msgstr = WebSocketMessage.create("local", "PEER_LIST", peerString)
+		self.webclient.sendMessage(msgstr)
 
 	def sendChatMessage(self, peer, message):
 		pass
 	
 	def onChatMessage(self, peer, message):
-		self.webclient.sendMessage("CHAT " + peer + " " + message)
+		self.webclient.sendMessage(peer  + " CHAT " + message)
 		pass
 	
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
-		print "PRINTING PEER MSG::" + msg + " FROM: " + peerIdentity
+		print "<<<<<<Peer msg"
+		print "Peer: [" + peerIdentity + "]"
 		
-		if "CHAT" in msg:
-			self.onChatMessage(peerIdentity, msg[5:])
+		prefix, msgContent = PeerMessage.parse(msg);
+		msgContent = msgContent.strip()
+		
+		print "PREFIX: [" + prefix + "]"
+		print "CONTENT: [" + msgContent + "]"
+		
+		if "CHAT" == prefix:
+			self.onChatMessage(peerIdentity, msgContent)
 
-		if "NEW_ROOM" in msg:
-			self.webclient.sendMessage(msg + " " + peerIdentity)
+		if "NEW_ROOM" == prefix:
+			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
-		if "JOIN_ROOM" in msg:
-			room = msg[10:]
-			self.webclient.sendMessage("JOIN_ROOM " + peerIdentity + " " + room)
+		if "JOIN_ROOM" == prefix:
+			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
-		if "ACCEPTED_FOR" in msg:
-			room = msg[13:]
-			self.webclient.sendMessage("ACCEPTED_FOR " + peerIdentity + " " + room)	
+		if "ACCEPT_PEER" == prefix:
+			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
-		if "CAN_WATCH" in msg:
-			room = msg[10:]
-			self.webclient.sendMessage("CAN_WATCH " + peerIdentity + " " + room)	
+		if "CAN_WATCH" == prefix:
+			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
-		if "START_GAME" in msg:
-			room = msg[11:]
-			self.webclient.sendMessage("START_GAME " + peerIdentity + " " + room)	
+		if "START_GAME" == prefix:
+			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
-		if "START_OK" in msg:
-			room = msg[9:];
-			self.webclient.sendMessage("START_OK " + peerIdentity + " " + room)	
+		if "READY_GAME" == prefix:
+			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 	
-		print "AsyncUser treating TCP msg: " + msg
+		print ">>>>>>"
 
 	
 	def onWebClientMessage(self, msg, isBinary):	
 		print "AsyncUser action [" +  msg + "]"
 		
-		if "PEER_LIST" in msg:
+		peerIdentity, msgPrefix, msgContent = WebSocketMessage.parse(msg);
+		
+		if "PEER_LIST" == msgPrefix:
 			self.onPeerListChange()
 			
-		if "CHAT" in msg:
-			print msg
-			msg = msg[5:]
-			id_peer = int(msg[0: msg.find("_")])			
+		if "CHAT" == msgPrefix:
+			self.main.sendMessage(peerIdentity, "CHAT " + msgContent);
 			
-			msg = msg[msg.find(" ")+1:]
-			
-			peers = self.main.getPeerList()
-			
-			peers[id_peer][1].sendLine("CHAT " + msg);
-			
-		if "CREATE_ROOM" in msg:
-			roomName = msg[12:]
-			self.main.createNewRoom(roomName);
-			self.webclient.sendMessage("NEW_ROOM BROADCAST DONE")
-
-		if "REANNOUNCE_CREATED_ROOM" in msg:
+		if "CREATE_ROOM" == msgPrefix:
+			self.main.createNewRoom(msgContent.strip());
+		
+		if "REANNOUNCE_CREATED_ROOM" == msgPrefix:
 			self.main.reannounceRoom();
 		
-		if "BROADCAST" in msg:
+		if "BROADCAST" == msgPrefix:
 			self.main.broadcast()
 		
-		if "JOIN_ROOM" in msg:
-			print msg
-			msg = msg[10:]
+		if "JOIN_ROOM" == msgPrefix:
+			roomName = msgContent.strip()
+			self.main.sendMessage(peerIdentity, "JOIN_ROOM " + roomName);
 			
-			roomName = msg[0:msg.find(" ")]
-			msg = msg[msg.find(" ")+1:].strip()
-			id_peer = int(msg[0: msg.find("_")])			
-			peers = self.main.getPeerList()
-			
-			peers[id_peer][1].sendLine("JOIN_ROOM " + roomName);
-			
-		if "ACCEPT_PEER" in msg:
-			msg = msg[12:]
-			
-			roomName = msg[0:msg.find(" ")]
-			msg = msg[msg.find(" ")+1:].strip()
-			id_peer = int(msg[0: msg.find("_")])			
-			peers = self.main.getPeerList()
-			
-			peers[id_peer][1].sendLine("ACCEPTED_FOR " + roomName);			
-			
-		if "CAN_WATCH" in msg:
-			msg = msg[10:];
+		if "ACCEPT_PEER" == msgPrefix:
+			roomName = msgContent.strip()
+			self.main.sendMessage(peerIdentity, "ACCEPT_PEER " + roomName);
 
-			roomName = msg[0:msg.find(" ")]
-			msg = msg[msg.find(" ")+1:].strip()
-			id_peer = int(msg[0: msg.find("_")])			
-			peers = self.main.getPeerList()
-			peers[id_peer][1].sendLine("CAN_WATCH " + roomName);			
+		if "CAN_WATCH" == msgPrefix:
+			roomName = msgContent.strip()
+			self.main.sendMessage(peerIdentity, "CAN_WATCH " + roomName);
 		
+		if "START_GAME" == msgPrefix:
+			roomName = msgContent.strip()
+			self.main.sendMulticast("START_GAME " + roomName)
 		
-		if "START_GAME" in msg:
-			msg = msg[11:];
-
-			roomName = msg[0:msg.find(" ")]
-			msg = msg[msg.find(" ")+1:].strip()
-			id_peer = int(msg[0: msg.find("_")])			
-			peers = self.main.getPeerList()
-			peers[id_peer][1].sendLine("START_GAME " + roomName);
-		
-		if "START_OK" in msg:
-			msg = msg[9:];
-			roomName = msg[0:msg.find(" ")]
-			msg = msg[msg.find(" ")+1:].strip()
-			id_peer = int(msg[0: msg.find("_")])			
-			peers = self.main.getPeerList()
-			peers[id_peer][1].sendLine("START_OK " + roomName);					
+		if "READY_GAME" == msgPrefix:
+			roomName = msgContent.strip()
+			self.main.sendMessage(peerIdentity, "READY_GAME " + roomName);		
 		
 		
 		
