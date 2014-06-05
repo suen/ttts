@@ -9,7 +9,7 @@ from twisted.internet import reactor
 from Game import TicTacToe
 from Player import AI, AsyncPlayer
 from User import AsyncUser
-import time, sys, signal
+import time, sys, signal, os    
 from threading import Thread
 from ConfigParser import ConfigParser
 
@@ -47,6 +47,8 @@ class Main:
         self.gameLoopThread = Thread(target=self.run)
         self.gameLoopThread.start()
         
+        Thread(target=self.startWebclient).start()
+        
         self.startNetwork()
 
 
@@ -66,7 +68,11 @@ class Main:
     def startNetwork(self):
         self.net.startNetwork()
         self.die = True
-        
+    
+    def startWebclient(self):
+        os.system("/usr/bin/firefox ../web/index.html")
+        return
+    
     def connectPeer(self, address, port):
         self.net.connectPeer(address, port);
 
@@ -107,12 +113,16 @@ class Main:
         return;
     
     def createNewRoom(self, roomName):
-        self.lastBroadcastedMsg = "NEW_ROOM " + roomName
-        self.net.sendBroadcast(self.lastBroadcastedMsg);
+        self.lastroomCreated = roomName
+        print "Creating a new room " + roomName
+        self.net.sendMulticast("NEW_ROOM " + self.lastroomCreated)
 
-    def reBroadcastLastMsg(self):
-        if self.lastBroadcastedMsg != "":
-            self.net.sendBroadcast(self.lastBroadcastedMsg);
+    def reannounceRoom(self):
+        print "Rebroadcasting created room " + self.lastroomCreated
+        self.net.sendMulticast("NEW_ROOM " + self.lastroomCreated)
+
+    def broadcast(self):
+        self.net.broadcast();
 
  
     def run(self):

@@ -7,11 +7,11 @@ class User:
 	
 
 class AsyncUser(User):
-	
 	def __init__(self, main):
 		self.webclient = None
 		self.main = main
 		self.duplicates = [];
+		self.clientstate = "NONE";
 	
 	def setWebClient(self, webclient):
 		if self.webclient is not None and self.webclient != webclient:
@@ -65,16 +65,34 @@ class AsyncUser(User):
 	
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
-		print "PRINTING PEER MSG::" + msg + " from: " + peerIdentity
+		print "PRINTING PEER MSG::" + msg + " FROM: " + peerIdentity
 		
 		if "CHAT" in msg:
 			self.onChatMessage(peerIdentity, msg[5:])
 
+		if "NEW_ROOM" in msg:
+			self.webclient.sendMessage(msg + " " + peerIdentity)
 		
 		if "JOIN_ROOM" in msg:
 			room = msg[10:]
 			self.webclient.sendMessage("JOIN_ROOM " + peerIdentity + " " + room)
 		
+		if "ACCEPTED_FOR" in msg:
+			room = msg[13:]
+			self.webclient.sendMessage("ACCEPTED_FOR " + peerIdentity + " " + room)	
+		
+		if "CAN_WATCH" in msg:
+			room = msg[10:]
+			self.webclient.sendMessage("CAN_WATCH " + peerIdentity + " " + room)	
+		
+		if "START_GAME" in msg:
+			room = msg[11:]
+			self.webclient.sendMessage("START_GAME " + peerIdentity + " " + room)	
+		
+		if "START_OK" in msg:
+			room = msg[9:];
+			self.webclient.sendMessage("START_OK " + peerIdentity + " " + room)	
+	
 		print "AsyncUser treating TCP msg: " + msg
 
 	
@@ -99,9 +117,12 @@ class AsyncUser(User):
 			roomName = msg[12:]
 			self.main.createNewRoom(roomName);
 			self.webclient.sendMessage("NEW_ROOM BROADCAST DONE")
+
+		if "REANNOUNCE_CREATED_ROOM" in msg:
+			self.main.reannounceRoom();
 		
-		if "REBROADCAST" in msg:
-			self.main.reBroadcastLastMsg()
+		if "BROADCAST" in msg:
+			self.main.broadcast()
 		
 		if "JOIN_ROOM" in msg:
 			print msg
@@ -114,13 +135,42 @@ class AsyncUser(User):
 			
 			peers[id_peer][1].sendLine("JOIN_ROOM " + roomName);
 			
-
+		if "ACCEPT_PEER" in msg:
+			msg = msg[12:]
 			
-		#	for peer in peers:
-		#		peer[1].sendLine(msg)
+			roomName = msg[0:msg.find(" ")]
+			msg = msg[msg.find(" ")+1:].strip()
+			id_peer = int(msg[0: msg.find("_")])			
+			peers = self.main.getPeerList()
+			
+			peers[id_peer][1].sendLine("ACCEPTED_FOR " + roomName);			
+			
+		if "CAN_WATCH" in msg:
+			msg = msg[10:];
+
+			roomName = msg[0:msg.find(" ")]
+			msg = msg[msg.find(" ")+1:].strip()
+			id_peer = int(msg[0: msg.find("_")])			
+			peers = self.main.getPeerList()
+			peers[id_peer][1].sendLine("CAN_WATCH " + roomName);			
 		
-		#self.webclient.sendMessage("I will serving you very soon, have patience")
 		
+		if "START_GAME" in msg:
+			msg = msg[11:];
+
+			roomName = msg[0:msg.find(" ")]
+			msg = msg[msg.find(" ")+1:].strip()
+			id_peer = int(msg[0: msg.find("_")])			
+			peers = self.main.getPeerList()
+			peers[id_peer][1].sendLine("START_GAME " + roomName);
+		
+		if "START_OK" in msg:
+			msg = msg[9:];
+			roomName = msg[0:msg.find(" ")]
+			msg = msg[msg.find(" ")+1:].strip()
+			id_peer = int(msg[0: msg.find("_")])			
+			peers = self.main.getPeerList()
+			peers[id_peer][1].sendLine("START_OK " + roomName);					
 		
 		
 		

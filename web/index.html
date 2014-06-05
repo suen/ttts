@@ -82,6 +82,12 @@
  		width: 48px;
  		height: 100%;
  	}
+ 	.small-container {
+ 		width: 100%;
+ 		height: 100px;
+ 		background-color: #dfdfdf;
+ 		padding: 20px;
+ 	}
 	
     </style>
   </head>
@@ -118,13 +124,14 @@
       <!-- Example row of columns -->
       <div class="row">
 
-        <div class="col-md-2" style="background: #efefef; float: left;">
+        <div class="col-md-2" style="background: #efefef; float: left; padding-bottom: 20px;">
           <h4>Peers connected</h4>
            <table class="table" id="peer-list">
 			<tr><td>skuller(11)</td></tr>
 			<tr><td>dauja</td></tr>
 			<tr><td>samey</td></tr>
           </table>
+	      <button id="broadcast-btn" class="btn btn-primary btn-default">Broadcast</button>
       	 </div>
         <div class="col-md-6" id="content">
 <!--   			<div>

@@ -88,11 +88,40 @@ Dashboard = function(main) {
 		minute = d.getMinutes().toString();
 		second = d.getSeconds().toString();
 		
+		msgde = msg.split(" ")
+		peerId = msgde[0]
+		roomName = msgde[1]
+		
+		acceptBtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
+		acceptBtn.text("Accept");
+
+		canWatchBtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
+		canWatchBtn.text("Can Watch");
+		
+		dashboard = this
+		acceptBtn.click(function() {
+			ref = $(this).attr("ref");
+			newRoomMsgs = ref.split(" ");
+			roomName = newRoomMsgs[0];
+			peerId = newRoomMsgs[1];
+			dashboard.main.acceptPeer(peerId, roomName);
+		});
+		
+		canWatchBtn.click(function() {
+			ref = $(this).attr("ref");
+			newRoomMsgs = ref.split(" ");
+			roomName = newRoomMsgs[0];
+			peerId = newRoomMsgs[1];
+			dashboard.main.canWatchPeer(peerId, roomName);
+		});
+		
 		tr = $("<tr>");
 		tdtime = $("<td>").text(hour + ":" + minute + ":" + second)
 		td = $("<td>").text(msg);
+		tdbtn = $("<td>").append(acceptBtn);
+		tdbtn2 = $("<td>").append(canWatchBtn);
 		tr.append(tdtime)
-		tr.append(td)
+		tr.append(td).append(tdbtn).append(tdbtn2);
 		
 		this.broadcastReplyTable.prepend(tr);	
 	}
@@ -142,6 +171,58 @@ Dashboard = function(main) {
 		
 		this.broadcastReceivedTable.prepend(tr);	
 	}
+	
+	this.roomAcceptedDOM = function(roomName, peerId, type) {
+		
+		if (type == "PLAY") {
+			displayText = "You have been accepted to PLAY in '";
+		} 
+		if (type == "WATCH") {
+			displayText = "You have been accepted to WATCH the play in '"
+		}
+		
+		displayText += roomName + "' by '" + peerId + "'"
+		
+		Logger.log(displayText)
+		divcontainer = $("<div>")
+		h2 = $("<h2>").text("Join Room")
+
+		divaccepted = $("<div>").attr("class", "small-container");
+
+		startGamebtn = $("<button>").attr("class", "btn btn-primary btn-success").attr("ref", roomName + " " + peerId)
+		startGamebtn.text("Start Game");
+		divaccepted.append($("<p>").css("text-align", "center")
+				.text(displayText)
+		)
+		divaccepted.append($("<p>").css("text-align", "center").append(startGamebtn));
+		
+		dashboard = this;
+		startGamebtn.click(function(evt) {
+			$(this).text("Waiting..")
+			$(this).prop('disabled', true);
+			dashboard.main.startGame(peerId, roomName)
+		});
+		
+		divcontainer.append(h2).append(divaccepted)
+		$("#content").html(divcontainer);		
+	}
+	
+	this.onCanWatch = function(msg) {
+		args = msg.split(" ");
+		this.roomAcceptedDOM(args[1], args[0], "WATCH")
+	}
+
+	this.onAcceptedForRoom = function(msg) {
+		args = msg.split(" ");
+		this.roomAcceptedDOM(args[1], args[0], "PLAY")
+	}
+	
+	this.createGameDOM = function(msg) {
+		Logger.log("now starting the game");
+	}
+
+	
+//	this.roomAcceptedDOM("hi", "accepted");
 	
 	//$("#chatbox").hide();
 }
@@ -230,6 +311,35 @@ Main = function() {
 			msg = msg.substr(9)
 			this.dashboard.onNewRoomBroadcastReceived(msg);
 		}
+		
+		if (msg.substr(0,12)=="ACCEPTED_FOR") {
+			msg = msg.substr(13)
+			this.dashboard.onAcceptedForRoom(msg);			
+		}
+		if (msg.substr(0,9)=="CAN_WATCH") {
+			msg = msg.substr(10)
+			this.dashboard.onCanWatch(msg);			
+		}
+		
+		this.gameStarted = false;
+		if (msg.substr(0,10)=="START_GAME") {
+			msg = msg.substr(11)
+			if (!this.gameStarted) {
+				this.dashboard.createGameDOM(msg);
+				this.gameStarted = true;
+			} 
+			msg = msg.split(" ");
+			this.connect.sendMessage("START_OK " + msg[1] + " " + msg[0]);
+		}
+
+		if (msg.substr(0,8)=="START_OK") {
+			msg = msg.substr(9)
+			if (!this.gameStarted) {
+				this.dashboard.createGameDOM(msg);
+				this.gameStarted = true;
+			} 
+		}
+		
 	};
 	
 	this.sendChat = function(peer, msg) {
@@ -244,8 +354,20 @@ Main = function() {
 		this.connect.sendMessage("JOIN_ROOM " + roomName + " " + peer)
 	}
 	
+	this.acceptPeer = function(peerId, roomName){
+		this.connect.sendMessage("ACCEPT_PEER " + roomName + " " + peerId)
+	}
+	
+	this.canWatchPeer = function(peerId, roomName){
+		this.connect.sendMessage("CAN_WATCH " + roomName + " " + peerId)
+	}
+	
+	this.startGame = function(peerId, roomName) {
+		this.connect.sendMessage("START_GAME " + roomName + " " + peerId)
+	}
+	
 	this.reBroadcastLastMessage = function() {
-		this.connect.sendMessage("REBROADCAST");
+		this.connect.sendMessage("REANNOUNCE_CREATED_ROOM");
 	}
 	
 	
@@ -258,6 +380,11 @@ Main = function() {
 	}
 	
 	that = this
+	
+	$("#broadcast-btn").click(function(evt){ 
+		that.connect.sendMessage("BROADCAST")
+	});
+	
 	$("#create-room-form-btn").click(function(evt){ 
 		that.dashboard.createNewRoomDOM();
 	});

@@ -20,6 +20,7 @@ class UDPBroadcaster(DatagramProtocol):
         self.broadcastAddress = address
         self.breceiver = breceiver
         self.broadcastMsg = ""
+        self.defaultMsg = ""
         self.broadcastCount = 0
         self.startBroadcast = False
     
@@ -28,7 +29,16 @@ class UDPBroadcaster(DatagramProtocol):
         self.broadcastCount = 3
         self.startBroadcast = True
         print "UDP broadcast started"
+    
+    def setDefaultBroadcastMessage(self, message):
+        self.defaultMsg = message
         
+    def doDefaultBroadcast(self):
+        self.broadcastCount = 3
+        self.broadcastMsg = self.defaultMsg if self.defaultMsg !="" else "BROADCAST";
+        self.startBroadcast = True
+        print "UDP default broadcast started"
+    
     def stopBroadcast(self):
         self.startBroadcast = False
         self.broadcastCount = 0
@@ -218,7 +228,7 @@ class Network:
         except CannotListenError:
             print "Cannot listen to " + str(self.udpPort) + " or " + str(self.tcpPort) + " .. exiting "
 
-        
+    
 
     def connectPeer(self, address, port):
         reactor.connectTCP(address, port, self.clientFactory);
@@ -229,24 +239,26 @@ class Network:
         #return str(len(self.webclient)) + " peers connected"
         
     #UDP broadcast
-    def sendBroadcast(self, msg):
-        self.broadcaster.setMsgToBroadcast(msg)    
-        pass
+    def broadcast(self):
+        self.broadcaster.doDefaultBroadcast()
     
     def stopBroadcast(self):
         self.broadcaster.stopBroadcast()
     
     def onBroadcastReceived(self, dtuple):
-        self.main.onBroadcastReceived(dtuple);
+        datagram,peerIdentity = dtuple;
+        
+        broadcastingPeer = self.getPeerByIP(peerIdentity[0])
+
+        if broadcastingPeer is None:
+            self.connectPeer(peerIdentity[0], peerIdentity[1]);
+            #return
+        #self.main.onBroadcastReceived(dtuple);
         #print dtuple, " RECEIVED"
-            
-    #TCP receiver
-    def setReceiver(self, receiver):
-        pass
     
-    #TCP sender
-    def sendmsg(self, msg, address):
-        pass
+    def sendMulticast(self, msg):
+        for (n,p,ip) in self.peers:
+            p.sendLine(msg)
 
 
 class BroadcastListener():
