@@ -6,7 +6,7 @@ Created on May 17, 2014
 
 from Network import Network,BroadcastListener
 from twisted.internet import reactor
-from Game import TicTacToe
+from Game import TicTacToe, GameRoom
 from Player import AI, AsyncPlayer
 from User import AsyncUser
 import time, sys, signal, os    
@@ -51,7 +51,6 @@ class Main:
         
         self.startNetwork()
 
-
     def new_game_init(self):
         print "New Game initializing"
         self.game = TicTacToe()
@@ -64,7 +63,7 @@ class Main:
         self.playerHasMoved = False
         self.playerMove = None
         print "New Game started"
-            
+
     def startNetwork(self):
         self.net.startNetwork()
         self.die = True
@@ -83,7 +82,10 @@ class Main:
 
     def getPeerList(self):
         return self.net.getPeers()
-    
+  
+    def getPeerById(self, peerId):
+        return self.net.getPeerById(peerId)
+      
     def onPeerListChange(self):
         print "calling self.user for peer change"
         self.user.onPeerListChange()
@@ -119,19 +121,23 @@ class Main:
         return;
     
     def createNewRoom(self, roomName):
-        self.lastroomCreated = roomName
-        print "Creating a new room " + roomName
-        self.net.sendMulticast("NEW_ROOM " + self.lastroomCreated)
+        self.gameRoom = GameRoom(roomName)
+        print "Creating a new room " + self.gameRoom.getName()
+
 
     def reannounceRoom(self):
-        print "Rebroadcasting created room " + self.lastroomCreated
-        self.net.sendMulticast("NEW_ROOM " + self.lastroomCreated)
+        print "Multicasting created room " + self.gameRoom.getName()
+        self.net.sendMulticast("NEW_ROOM " + self.gameRoom.getName())
+    
+    def getGameRoom(self):
+        return self.gameRoom
 
     def sendMulticast(self, msg):
         self.net.sendMulticast(msg)
         
     def broadcast(self):
         self.net.broadcast();
+
 
  
     def run(self):

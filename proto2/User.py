@@ -50,6 +50,10 @@ class AsyncUser(User):
 		self.main = main
 		self.duplicates = [];
 		self.clientstate = "NONE";
+		self.game = None;
+		self.player = None;
+		self.opponent = None;
+		self.spectators = [];
 	
 	def setWebClient(self, webclient):
 		if self.webclient is not None and self.webclient != webclient:
@@ -94,14 +98,7 @@ class AsyncUser(User):
 		peerString += "}"
 		msgstr = WebSocketMessage.create("local", "PEER_LIST", peerString)
 		self.webclient.sendMessage(msgstr)
-
-	def sendChatMessage(self, peer, message):
-		pass
-	
-	def onChatMessage(self, peer, message):
-		self.webclient.sendMessage(peer  + " CHAT " + message)
-		pass
-	
+		
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
 		print "<<<<<<Peer msg"
@@ -114,12 +111,14 @@ class AsyncUser(User):
 		print "CONTENT: [" + msgContent + "]"
 		
 		if "CHAT" == prefix:
-			self.onChatMessage(peerIdentity, msgContent)
+			self.webclient.sendMessage(peerIdentity  + " CHAT " + msgContent)
 
 		if "NEW_ROOM" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "JOIN_ROOM" == prefix:
+			self.main.createNewRoom(msgContent.strip());
+			self.gameRoom = self.main.getGameRoom();
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "ACCEPT_PEER" == prefix:
@@ -129,6 +128,17 @@ class AsyncUser(User):
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "START_GAME" == prefix:
+			msg = "START_GAME %s player2: %s spectators: %s"
+			
+			p2ip = re.search(r'2\: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+', msgContent).group()[3:].strip()
+			s1ip = re.search(r's\: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+', msgContent).group()[3:].strip()
+			
+			p1peer = self.main.getPeerById(peerIdentity)
+			p2peer = self.main.getPeerByIp(p2ip)
+			s1peer = self.main.getPeerByIp(s1ip);
+			
+			
+						
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "READY_GAME" == prefix:
@@ -138,7 +148,8 @@ class AsyncUser(User):
 
 	
 	def onWebClientMessage(self, msg, isBinary):	
-		print "AsyncUser action [" +  msg + "]"
+		print "<<<<<<Webclient msg"
+		print "Msg: [" + msg + "]"
 		
 		peerIdentity, msgPrefix, msgContent = WebSocketMessage.parse(msg);
 		
@@ -150,6 +161,8 @@ class AsyncUser(User):
 			
 		if "CREATE_ROOM" == msgPrefix:
 			self.main.createNewRoom(msgContent.strip());
+			self.gameRoom = self.main.getGameRoom();
+			self.main.sendMulticast("NEW_ROOM " + self.gameRoom.getName())
 		
 		if "REANNOUNCE_CREATED_ROOM" == msgPrefix:
 			self.main.reannounceRoom();
@@ -159,25 +172,34 @@ class AsyncUser(User):
 		
 		if "JOIN_ROOM" == msgPrefix:
 			roomName = msgContent.strip()
+			self.main.createNewRoom(roomName);
+			self.gameRoom = self.main.getGameRoom();
 			self.main.sendMessage(peerIdentity, "JOIN_ROOM " + roomName);
 			
 		if "ACCEPT_PEER" == msgPrefix:
 			roomName = msgContent.strip()
+			self.gameRoom.setPlayer2(peerIdentity);
 			self.main.sendMessage(peerIdentity, "ACCEPT_PEER " + roomName);
 
 		if "CAN_WATCH" == msgPrefix:
 			roomName = msgContent.strip()
+			self.gameRoom.addSpectator(peerIdentity);
 			self.main.sendMessage(peerIdentity, "CAN_WATCH " + roomName);
 		
 		if "START_GAME" == msgPrefix:
 			roomName = msgContent.strip()
-			self.main.sendMulticast("START_GAME " + roomName)
+			
+			p2peer = self.main.getPeerById(self.gameRoom.getPlayer2())
+			s1peer = self.main.getPeerById(self.gameRoom.getSpectators()[0])
+			msg = "START_GAME %s player2: %s spectators: %s"%(roomName, p2peer.ip, s1peer.ip)
+			
+			self.main.sendMulticast(msg)
 		
 		if "READY_GAME" == msgPrefix:
 			roomName = msgContent.strip()
 			self.main.sendMessage(peerIdentity, "READY_GAME " + roomName);		
-		
-		
+
+		print ">>>>>>"		
 		
 		
 		

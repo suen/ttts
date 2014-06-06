@@ -176,6 +176,7 @@ class Network:
                 return
         peerCount = len(self.getPeers())
         peer.peerName = str(peerCount)+ "_" + name
+        peer.ip = peer.transport.getPeer().host
         peer.onLineReceived = self.main.onPeerMsgReceived
         self.peers.append((peer.peerName, peer, peer.transport.getPeer().host))
         print "new peer"+ str((peer.peerName, peer.transport.getPeer().host))
@@ -195,6 +196,12 @@ class Network:
                 return p
         return None
 
+    def getPeerById(self, id):
+        for (n, p, i) in self.peers:
+            if n == id:
+                return p
+        return None
+    
     def getPeers(self):
         return self.peers
     

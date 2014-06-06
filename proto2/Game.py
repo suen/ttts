@@ -163,9 +163,11 @@ class Board:
 
 class TicTacToe:
     
-    def __init__(self):
+    def __init__(self, player1, player2):
         self.board = Board(6)
         self.next_player = None
+        self.player1 = player1;
+        self.player2 = player2;
     
     def setPlayer1(self, player1):
         self.player1 = player1
@@ -215,3 +217,40 @@ class TicTacToe:
         
         self.board.write_onboard(self.next_player.symbol, move)
         self.next_player = self.getNextPlayer()    
+        
+class GameRoom:
+    
+    def __init__(self, name):
+        self.name = name;
+        #self.creator = creator;
+        self.spectators = [];
+ 
+    def addSpectator(self, peer):
+        if peer not in self.spectators:
+            self.spectators.append(peer);
+    
+    def getSpectators(self):
+        return self.spectators;
+ 
+    def setPlayer1(self, player1):
+        self.player1 = player1
+
+    def setPlayer2(self, player2):
+        self.player2 = player2
+        
+    def getPlayer2(self):
+        return self.player2
+    
+    def setFirstPlayer(self, player):
+        self.firstplayer = player
+    
+    def getName(self):
+        return self.name;
+    
+    def getCreator(self):
+        return self.name
+    
+    def gameInit(self):
+        self.game = TicTacToe(self.player1, self.player2);
+
+      

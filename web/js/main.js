@@ -34,7 +34,7 @@ Main = function() {
 				
 			case "PEER_LIST":
 				peerObj = JSON.parse(content);
-				
+				/*
 				for (i in peerObj) {
 					found = false;
 					for (p in Peer.list) {
@@ -46,7 +46,13 @@ Main = function() {
 						peer = new Peer(peerObj[i]);
 						Peer.list[peer.getId()] = peer;
 					}
+				}*/
+				Peer.list = {};
+				for (i in peerObj) {
+					peer = new Peer(peerObj[i]);
+					Peer.list[peer.getId()] = peer;
 				}
+				
 				
 				this.dashboard.peerListUpdate();
 				Logger.log("Peer list obtained");
