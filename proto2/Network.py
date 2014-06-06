@@ -194,6 +194,7 @@ class Network:
         for (n, p, i) in self.peers:
             if i == ip:
                 return p
+        print "getPeerByIP(): No peer found for %s"%(ip)
         return None
 
     def getPeerById(self, id):

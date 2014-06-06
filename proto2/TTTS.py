@@ -85,7 +85,10 @@ class Main:
   
     def getPeerById(self, peerId):
         return self.net.getPeerById(peerId)
-      
+    
+    def getPeerByIP(self, peerIp):
+        return self.net.getPeerByIP(peerIp)
+    
     def onPeerListChange(self):
         print "calling self.user for peer change"
         self.user.onPeerListChange()

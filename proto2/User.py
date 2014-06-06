@@ -1,5 +1,5 @@
 
-import time;
+import time, re;
 
 class WebSocketMessageParseException:
 	pass
@@ -128,18 +128,29 @@ class AsyncUser(User):
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "START_GAME" == prefix:
-			msg = "START_GAME %s player2: %s spectators: %s"
 			
+			roomName = msgContent[0:msgContent.find(" ")].strip()
 			p2ip = re.search(r'2\: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+', msgContent).group()[3:].strip()
 			s1ip = re.search(r's\: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+', msgContent).group()[3:].strip()
 			
+			
 			p1peer = self.main.getPeerById(peerIdentity)
-			p2peer = self.main.getPeerByIp(p2ip)
-			s1peer = self.main.getPeerByIp(s1ip);
+			myip = p1peer.transport.getHost().host
 			
-			
+			p2peer = self.main.getPeerByIP(p2ip) if p2ip != myip else None;
+			s1peer = self.main.getPeerByIP(s1ip) if s1ip != myip else None;
+
+			p1name = p1peer.peerName
+			p2name = p2peer.peerName if p2peer is not None else "local"
+			s1name = s1peer.peerName if s1peer is not None else "local"
 						
-			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
+			self.gameRoom.setPlayer1(p1peer);
+			self.gameRoom.setPlayer2(p2peer);
+			self.gameRoom.addSpectator(s1peer);
+
+			msg = "%s player1: %s player2: %s spectators: %s"%(roomName, p1name,p2name,s1name)
+			print prefix, msg
+			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msg))
 		
 		if "READY_GAME" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
@@ -178,20 +189,25 @@ class AsyncUser(User):
 			
 		if "ACCEPT_PEER" == msgPrefix:
 			roomName = msgContent.strip()
-			self.gameRoom.setPlayer2(peerIdentity);
+			
+			self.gameRoom.setPlayer2(self.main.getPeerById(peerIdentity));
 			self.main.sendMessage(peerIdentity, "ACCEPT_PEER " + roomName);
 
 		if "CAN_WATCH" == msgPrefix:
 			roomName = msgContent.strip()
-			self.gameRoom.addSpectator(peerIdentity);
+			self.gameRoom.addSpectator(self.main.getPeerById(peerIdentity));
 			self.main.sendMessage(peerIdentity, "CAN_WATCH " + roomName);
 		
 		if "START_GAME" == msgPrefix:
 			roomName = msgContent.strip()
 			
-			p2peer = self.main.getPeerById(self.gameRoom.getPlayer2())
-			s1peer = self.main.getPeerById(self.gameRoom.getSpectators()[0])
-			msg = "START_GAME %s player2: %s spectators: %s"%(roomName, p2peer.ip, s1peer.ip)
+			p2peer = self.gameRoom.getPlayer2()
+			s1peer = self.gameRoom.getSpectators()[0]
+			selfip = p2peer.transport.getHost().host
+			
+			self.gameRoom.setPlayer1(None);
+			
+			msg = "START_GAME %s player1: %s player2: %s spectators: %s"%(roomName, selfip, p2peer.ip, s1peer.ip)
 			
 			self.main.sendMulticast(msg)
 		
