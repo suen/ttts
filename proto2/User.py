@@ -221,7 +221,13 @@ class AsyncUser(User):
 		
 		if "READY_GAME" == msgPrefix:
 			roomName = msgContent.strip()
-			self.main.sendMessage(peerIdentity, "READY_GAME " + roomName);		
+			self.main.sendMessage(peerIdentity, "READY_GAME " + roomName);
+			
+			
+		if "TTTS_MOVE" == msgPrefix:
+			move = msgContent.strip();
+			
+			
 
 		print ">>>>>>"		
 		

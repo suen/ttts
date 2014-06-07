@@ -95,18 +95,20 @@ Main = function() {
 			
 			player1 = param['player1'] =="local" ? new Peer("0_myself") : new Peer(param['player1']);
 			player2 = param['player2'] =="local" ? new Peer("0_myself") : new Peer(param['player2']);
-			spectators = param['spectators'] =="local" ? "myself" : param['spectators']; 
+			spectators = param['spectators'] =="local" ?  new Peer("0_myself") : new Peer(param['spectators']);
 
 			player1symbol = param['player1Symbol'];
 			player2symbol = param['player2Symbol'];
-			firstplayer = param['firstPlay']
+			firstplayer = param['firstPlay'];
 			
 			if (player1.getName()=="myself") {
-				this.tic.setPlayerChar(player1symbol)
+				this.tic.setPlayerChar(player1symbol);
+				this.tic.setOpponent(player2);
 			}
 
 			if (player2.getName()=="myself") {
-				this.tic.setPlayerChar(player2symbol)
+				this.tic.setPlayerChar(player2symbol);
+				this.tic.setOpponent(player1);
 			}
 
 			console.log("FirstPlayer: " + firstplayer + " >> " + player1.getName())
@@ -114,7 +116,6 @@ Main = function() {
 				firstplayer=="player2" && player2.getName() == "myself" ) {
 				this.tic.unlockBoard();
 			}
-
 			
 			this.tic.setTitle(player1.getName() + " vs " + player2.getName());
 			this.tic.createBoard();
@@ -160,6 +161,11 @@ Main = function() {
 	
 	this.reBroadcastLastMessage = function() {
 		msg = Message.create("brodcast", "REANNOUNCE_CREATED_ROOM", " ");
+		this.connect.sendMessage(msg);
+	}
+	
+	this.sendGameMove = function(move) {
+		msg = Message.create("local", "TTTS_MOVE", move);
 		this.connect.sendMessage(msg);
 	}
 	

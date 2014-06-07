@@ -7,6 +7,7 @@ TicTacToe = function (controller) {
 	this.lastmove = [];	
 	this.board = [];
 	this.controller = controller;
+	this.opponent = null;
 	
 	$("#confirm-move-btn").click(function(){
 		if (this.locked)
@@ -17,11 +18,20 @@ TicTacToe = function (controller) {
 		Logger.log("Sending move " + move)
 		move[0]--;
 		move[1]--;
-		TicTacToe.instance().controller.connect.socket.send("TTTS PLAYER_MOVE " + move.toString());
+		//TicTacToe.instance().controller.connect.socket.send("TTTS PLAYER_MOVE " + move.toString());
+		Main.Instance().sendGameMove(move.toString());
 	});
 	
 	this.setPlayerChar = function(playerChar) {
 		this.playerChar = playerChar;
+	};
+	
+	this.setOpponent = function(opponent) {
+		this.opponent = opponent;
+	};
+	
+	this.getOpponent = function() {
+		return this.opponent;
 	};
 	
 	this.createBoard = function() {
