@@ -168,11 +168,18 @@ class AsyncUser(User):
 		if "READY_GAME" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 	
-		if "TTTS_BOARD" == prefix:		
+		if "TTTS_BOARD" == prefix:
 			board = json.loads(msgContent.strip());
 			self.game.setBoard(board);
 			newboard = json.dumps(self.game.getBoard());
+
 			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_BOARD", newboard))
+			if self.game.gameover():
+				winner = self.game.getWinner();
+				if winner  == "":
+					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", "nobody wins"))
+				else: 
+					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", winner + "wins"))
 	
 		if "TTTS_MAKE_MOVE" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_MAKE_MOVE", ""))
@@ -273,7 +280,16 @@ class AsyncUser(User):
 			
 			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_BOARD", newboard))
 			self.main.sendMulticast(msg)
-			self.main.sendMulticast("TTTS_MAKE_MOVE")
+
+			if self.game.gameover():
+				winner = self.game.getWinner();
+				if winner  == "":
+					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", "nobody wins"))
+				else: 
+					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", winner + "wins"))
+
+			else:
+				self.main.sendMulticast("TTTS_MAKE_MOVE")
 			
 			
 

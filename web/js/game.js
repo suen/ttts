@@ -8,6 +8,7 @@ TicTacToe = function (controller) {
 	this.board = [];
 	this.controller = controller;
 	this.opponent = null;
+	this.gameover = true;
 	
 	$("#confirm-move-btn").click(function(){
 		if (this.locked)
@@ -59,6 +60,9 @@ TicTacToe = function (controller) {
 	};
 	
 	this.unlockBoard = function() {
+		if (this.gameover)
+			return;
+
 		this.locked = false;
 		this.lastmove = [];
 		this.moved = false;

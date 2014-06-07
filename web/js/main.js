@@ -90,6 +90,10 @@ Main = function() {
 			case "TTTS_MAKE_MOVE":
 				this.tic.unlockBoard();
 				break;
+			case "TTTS_GAME_OVER":
+				this.tic.lockBoard();
+				this.tic.gameover = true;
+				Logger.log(content);
 		}
 	};
 
@@ -117,7 +121,7 @@ Main = function() {
 				this.tic.unlockBoard();
 			}
 			
-			this.tic.setTitle(player1.getName() + " vs " + player2.getName());
+			this.tic.setTitle(player1.getName() + "(X) vs " + player2.getName() + "(O)");
 			this.tic.createBoard();
 			this.tic.show();
 		}
