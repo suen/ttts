@@ -141,7 +141,8 @@ class Main:
     def broadcast(self):
         self.net.broadcast();
 
-
+    def getUsername(self):
+        return self.username
  
     def run(self):
 

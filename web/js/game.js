@@ -1,6 +1,6 @@
 
 TicTacToe = function (controller) {
-	this.playerChar = "";	
+	this.playerChar = "-";	
 	this.playerClass = "playerC"		
 	this.locked = true;
 	this.moved = false;
@@ -14,12 +14,13 @@ TicTacToe = function (controller) {
 			return;
 		$(this).text("Wait");
 		$(this).addClass("disabled");
-		move = TicTacToe.instance().lastmove
+		move = TicTacToe.instance().lastmove;
+		symbol = TicTacToe.instance().playerChar;
 		Logger.log("Sending move " + move)
 		move[0]--;
 		move[1]--;
 		//TicTacToe.instance().controller.connect.socket.send("TTTS PLAYER_MOVE " + move.toString());
-		Main.Instance().sendGameMove(move.toString());
+		Main.Instance().sendGameMove(JSON.stringify([symbol, move]));
 	});
 	
 	this.setPlayerChar = function(playerChar) {

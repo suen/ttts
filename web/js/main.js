@@ -82,6 +82,14 @@ Main = function() {
 			case "START_GAME":
 				this.startGame(content);
 				break;
+			case "TTTS_BOARD":
+				Logger.log("new board received");
+				boardreceived = JSON.parse(content);
+				this.tic.setBoard(boardreceived);
+				break;
+			case "TTTS_MAKE_MOVE":
+				this.tic.unlockBoard();
+				break;
 		}
 	};
 
@@ -101,17 +109,9 @@ Main = function() {
 			player2symbol = param['player2Symbol'];
 			firstplayer = param['firstPlay'];
 			
-			if (player1.getName()=="myself") {
-				this.tic.setPlayerChar(player1symbol);
-				this.tic.setOpponent(player2);
-			}
+			this.tic.setPlayerChar(param['yourSymbol']);
 
-			if (player2.getName()=="myself") {
-				this.tic.setPlayerChar(player2symbol);
-				this.tic.setOpponent(player1);
-			}
-
-			console.log("FirstPlayer: " + firstplayer + " >> " + player1.getName())
+			console.log("My symbol is  >> " + this.tic.playerChar)
 			if (firstplayer=="player1" && player1.getName() == "myself" ||
 				firstplayer=="player2" && player2.getName() == "myself" ) {
 				this.tic.unlockBoard();

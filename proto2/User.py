@@ -35,6 +35,7 @@ class PeerMessage:
 
 	@staticmethod
 	def parse(message):
+		message += " "
 		s1 = message.find(" ")
 		return message[0:s1], message[s1+1:]
 
@@ -98,7 +99,10 @@ class AsyncUser(User):
 		peerString += "}"
 		msgstr = WebSocketMessage.create("local", "PEER_LIST", peerString)
 		self.webclient.sendMessage(msgstr)
-		
+	
+	def getSelfIP(self):
+		return self.main.getPeerList()[0][1].transport.getHost().host;
+	
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
 		print "<<<<<<Peer msg"
@@ -122,37 +126,56 @@ class AsyncUser(User):
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "ACCEPT_PEER" == prefix:
+			self.playingAs = ("player2", "O");
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "CAN_WATCH" == prefix:
+			self.playingAs = ("spectator", "+");
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "START_GAME" == prefix:
-			
 			gameparam = json.loads(msgContent);
 			
 			p1peer = self.main.getPeerById(peerIdentity)
-			myip = p1peer.transport.getHost().host
+			myip = self.getSelfIP()
 			
 			p2peer = self.main.getPeerByIP(gameparam['player2']) if gameparam['player2'] != myip else None;
 			s1peer = self.main.getPeerByIP(gameparam['spectators']) if gameparam['spectators'] != myip else None;
 
 			p1name = p1peer.peerName
-			p2name = p2peer.peerName if p2peer is not None else "local"
-			s1name = s1peer.peerName if s1peer is not None else "local"
-						
-			self.gameRoom.setPlayer1(p1peer);
-			self.gameRoom.setPlayer2(p2peer);
-			self.gameRoom.addSpectator(s1peer);
+			p2name = p2peer.peerName if p2peer is not None else self.main.getUsername()
+			s1name = s1peer.peerName if s1peer is not None else self.main.getUsername()
 
-			msg = '{"roomName": "%s","player1": "%s", "player2": "%s", "spectators": "%s", "player1Symbol": "X", "player2Symbol": "O", "firstPlay": "player1"}'%(gameparam['roomName'], p1name, p2name, s1name)
+						
+			p1tuple = (p1name, "X", p1peer)
+			p2tuple = (p2name, "O", p2peer)
+
+			self.myplayer = p2tuple;
+
+			self.gameRoom.setPlayer1(p1tuple);
+			self.gameRoom.setPlayer2(p2tuple);
+			self.gameRoom.addSpectator((s1name, "+", s1peer));
+			self.gameRoom.setFirstPlayer(p1tuple);
+			self.gameRoom.gameInit();
+			self.game = self.gameRoom.getGame();
+
+			msg = '{"roomName": "%s","player1": "%s", "player2": "%s", "spectators": "%s", "yourSymbol": "%s", "firstPlay": "player1"}'%(gameparam['roomName'], p1name, p2name, s1name, self.playingAs[1])
 			msg = msg.encode('ascii');
 			print "<<<<"+ str(type(msg)) + " " + msg + ">>>>>"
-
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msg))
+			print "My symbol is: " + self.playingAs[1]
 		
 		if "READY_GAME" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
+	
+		if "TTTS_BOARD" == prefix:		
+			board = json.loads(msgContent.strip());
+			self.game.setBoard(board);
+			newboard = json.dumps(self.game.getBoard());
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_BOARD", newboard))
+	
+		if "TTTS_MAKE_MOVE" == prefix:
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_MAKE_MOVE", ""))
 	
 		print ">>>>>>"
 
@@ -189,35 +212,44 @@ class AsyncUser(User):
 		if "ACCEPT_PEER" == msgPrefix:
 			roomName = msgContent.strip()
 			
-			self.gameRoom.setPlayer2(self.main.getPeerById(peerIdentity));
+			p2tuple = (self.main.getPeerById(peerIdentity).peerName, "O", self.main.getPeerById(peerIdentity))
+			self.gameRoom.setPlayer2(p2tuple);
 			self.main.sendMessage(peerIdentity, "ACCEPT_PEER " + roomName);
 
 		if "CAN_WATCH" == msgPrefix:
 			roomName = msgContent.strip()
-			self.gameRoom.addSpectator(self.main.getPeerById(peerIdentity));
+			p2tuple = (self.main.getPeerById(peerIdentity).peerName, "+", self.main.getPeerById(peerIdentity))
+			self.gameRoom.addSpectator(p2tuple);
 			self.main.sendMessage(peerIdentity, "CAN_WATCH " + roomName);
 		
 		if "START_GAME" == msgPrefix:
 			roomName = msgContent.strip()
-			
+			self.playingAs = ("player1", "X");
+
 			p2peer = self.gameRoom.getPlayer2()
 			s1peer = self.gameRoom.getSpectators()[0]
-			selfip = p2peer.transport.getHost().host
+			selfip = self.getSelfIP()
 			
-			self.gameRoom.setPlayer1(None);
+			p1tuple = (self.main.getUsername(), "X")
+			self.myplayer = p1tuple
 			
-			msg = '''START_GAME {"roomName": "%s", "player1": "%s", "player2": "%s", "spectators": "%s", "player1Symbol": "X", "player2Symbol": "O", "firstPlay": "player1"}'''%(roomName, selfip, p2peer.ip, s1peer.ip)
+			self.gameRoom.setPlayer1(p1tuple);
+			self.gameRoom.setFirstPlayer(p1tuple);
+			self.gameRoom.gameInit();
+			self.game = self.gameRoom.getGame();
+			
+			msg = '''START_GAME {"roomName": "%s", "player1": "%s", "player2": "%s", "spectators": "%s", "player1Symbol": "X", "player2Symbol": "O", "firstPlay": "player1"}'''%(roomName, selfip, p2peer[2].ip, s1peer[2].ip)
 			
 			msgloopback = '''{"roomName": "%s", 
 					"player1": "local", 
 					"player2": "%s", 
 					"spectators": "%s",
-					"player1Symbol": "X",
-					"player2Symbol": "O",
-					"firstPlay": "player1"}'''%(roomName, p2peer.peerName, s1peer.peerName)			
+					"yourSymbol": "%s", 
+					"firstPlay": "player1"}'''%(roomName, p2peer[2].peerName, s1peer[2].peerName,self.playingAs[1])			
 			
 			self.webclient.sendMessage(WebSocketMessage.create("local","START_GAME", msgloopback))
 			self.main.sendMulticast(msg)
+			print "My symbol is: " + self.playingAs[1]
 		
 		if "READY_GAME" == msgPrefix:
 			roomName = msgContent.strip()
@@ -225,7 +257,23 @@ class AsyncUser(User):
 			
 			
 		if "TTTS_MOVE" == msgPrefix:
-			move = msgContent.strip();
+			
+			if self.playingAs[1] == "+":
+				return
+			
+			move = json.loads(msgContent.strip());
+			game = self.gameRoom.getGame();
+			print "writing "+ self.playingAs[1] + " to board"
+			game.writeSymbol(self.playingAs[1], move[1]);
+			
+			newboard = json.dumps(game.getBoard());
+			print "result: " + newboard
+			
+			msg = 'TTTS_BOARD ' + newboard;
+			
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_BOARD", newboard))
+			self.main.sendMulticast(msg)
+			self.main.sendMulticast("TTTS_MAKE_MOVE")
 			
 			
 

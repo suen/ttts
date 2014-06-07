@@ -123,9 +123,12 @@ class Board:
 
     def write_onboard(self, symbol, point):
         board = self.board
-
-        if board[int(point[0])][int(point[1])] == "":
-            board[int(point[0])][int(point[1])] = symbol
+        
+        if type(point[0]) is str : 
+            if board[int(point[0])][int(point[1])] == "":
+                board[int(point[0])][int(point[1])] = symbol
+        else:
+            board[point[0]][point[1]] = symbol
         self.board =  board
 
     def write(self, symbol, coord):
@@ -155,7 +158,7 @@ class Board:
                     validMoves.append(self.board_address[i][j])
                     
         return validMoves
-        
+    
     def getCoordinates(self):
         return self.board_address
 
@@ -186,7 +189,10 @@ class TicTacToe:
         return self.next_player
     
     def getBoard(self):
-        return str(self.board.board)
+        return self.board.board;
+    
+    def setBoard(self, board):
+        self.board.board = board;
     
     def gameover(self):
         ifwinner = self.board.check()
@@ -215,8 +221,25 @@ class TicTacToe:
             print "Illegal move, make your move again"
             return;
         
-        self.board.write_onboard(self.next_player.symbol, move)
-        self.next_player = self.getNextPlayer()    
+        self.board.write_onboard(self.next_player[1], move)
+        self.next_player = self.getNextPlayer()
+     
+    def writeSymbol(self, symbol, point):
+        self.board.write_onboard(symbol, point)
+     
+    def boarddiff(self, newboard):
+        board = self.getBoard();
+        
+        found = [];         
+        for r in range(0, len(board)):
+             for i in range(0, len(board)):
+                 if board[r][i] != newboard[r][i]:
+                     if len(found) == 0:
+                         found = [r,i]
+                     else:
+                        print "the board has more than one modification"
+        return (found, newboard[found[0]][found[1]]);
+         
         
 class GameRoom:
     
@@ -238,6 +261,9 @@ class GameRoom:
     def setPlayer2(self, player2):
         self.player2 = player2
         
+    def getPlayer1(self):
+        return self.player1
+ 
     def getPlayer2(self):
         return self.player2
     
@@ -252,5 +278,10 @@ class GameRoom:
     
     def gameInit(self):
         self.game = TicTacToe(self.player1, self.player2);
+        self.game.setFirstMover(self.firstplayer);
+
+        
+    def getGame(self):
+        return self.game;
 
       
