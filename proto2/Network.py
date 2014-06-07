@@ -10,6 +10,7 @@ from threading import Thread
 from patterns import Singleton
 from Game import TicTacToe
 from Player import AI,AsyncPlayer
+import Crypto.PublicKey.RSA as RSA
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
                                        WebSocketServerFactory
@@ -76,7 +77,10 @@ class MyTCPProtocol(LineReceiver):
         self.peerName = ""
 
     def connectionMade(self):
-        self.sendLine("CONNECT " + Network.Instance().main.username)
+        username = Network.Instance().main.username;
+        publicKey = Network.Instance().main.getPublicKeyString()
+        
+        self.sendLine("CONNECT %s"%(username))
         pass
 
     def connectionLost(self, reason):
@@ -88,7 +92,8 @@ class MyTCPProtocol(LineReceiver):
         pass
     
     def lineReceived(self, line):       
-        print "TCP received: " + line
+        
+        print "TCP RECEIVED < %s >"%line
         
         if "CONNECT " in line:         
             space_index = line.find(" ")    
@@ -99,14 +104,11 @@ class MyTCPProtocol(LineReceiver):
             if peerName == Network.Instance().main.username:
                 return
             
-            #peerCount = len(Network.Instance().getPeers())
-            
-            #self.peerName = str(peerCount) + "_" + peerName
-            
             Network.Instance().addPeer(peerName, self)
-            #self.sendLine("welcome '" + peerName + "', You have been added to my list. There are currently " 
-            #              + str(peerCount) + " in my list, Welcome abroad")
-            self.sendLine("CONNECT_OK " + Network.Instance().main.username)
+            username = Network.Instance().main.username;
+            
+            
+            self.sendLine("CONNECT_OK %s"%username )
         
         elif "CONNECT_OK" in line:
             space_index = line.find(" ")
@@ -117,6 +119,17 @@ class MyTCPProtocol(LineReceiver):
             #peerCount = len(Network.Instance().getPeers())
             #self.peerName = str(peerCount) + "_" + peerName
             Network.Instance().addPeer(peerName, self)            
+        elif "PUBLIC_KEY" in line:
+            public_key = line[line.find(" ")+1:].strip()
+            self.publickey = RSA.importKey(public_key)
+            if self.publickey is not None:
+                print "Public key for %s has been retrieved "%self.peerName 
+        
+        elif "SEND_KEY" in line:
+            publicKey = Network.Instance().main.getPublicKeyString()
+            msg = "PUBLIC_KEY " + publicKey
+            self.sendLine(msg)
+        
         else:
             self.onLineReceived(self.peerName, line);
             
@@ -180,6 +193,9 @@ class Network:
         peer.onLineReceived = self.main.onPeerMsgReceived
         self.peers.append((peer.peerName, peer, peer.transport.getPeer().host))
         print "new peer"+ str((peer.peerName, peer.transport.getPeer().host))
+        
+        peer.sendLine("SEND_KEY")
+        
         self.main.onPeerListChange()
 
     def removePeer(self, peer):

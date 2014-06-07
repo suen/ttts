@@ -33,6 +33,42 @@ Dashboard = function(main) {
 		}
 	}
 	
+	this.settingDOM = function() {
+		divcontainer = $("<div>")
+		h2 = $("<h2>").text("Settings")
+		
+		table = $("<table>").attr("class", "table");
+		
+		tr1 = $("<tr>");
+		tr2 = $("<tr>")
+		
+		td11 = $("<td>").text("Location for new RSA key");
+		inputName = $("<input>").attr("type", "text");
+		td12 = $("<td>").append(inputName);
+		
+		td21 = $("<td>").attr("colspan", "2");
+		createButton = $("<button>").attr("class", "btn btn-primary btn-success");
+		createButton.text("Create")
+		tr1.append(td11).append(td12).append(createButton);
+		
+		//td21.append(createButton);
+		
+		tr2.append(td21);
+		
+		table.append(tr1).append(tr2);
+		
+		divcontainer.append(h2).append(table);
+		
+		$("#content").append(divcontainer)
+		
+		createButton.click(function(evt) {
+
+			path = $(this).parent().parent().prev().children().last().children().val()
+			Logger.log("creating new rsa key");
+			Main.Instance().createNewKey(path);
+		});
+	}
+	
 	this.createNewRoomDOM = function() {
 		divcontainer = $("<div>")
 		h2 = $("<h2>").text("New Room")

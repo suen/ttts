@@ -9,20 +9,34 @@ from twisted.internet import reactor
 from Game import TicTacToe, GameRoom
 from Player import AI, AsyncPlayer
 from User import AsyncUser
-import time, sys, signal, os    
+import time, sys, signal, os
+import Crypto.PublicKey.RSA as RSA
 from threading import Thread
-from ConfigParser import ConfigParser
+import ConfigParser
 
 class Main:
     def __init__(self):
-        config = ConfigParser()
+        config = ConfigParser.RawConfigParser()
         config.read("config.ini")
-        
+           
         self.username = config.get('user', 'username');
         self.broadcastAddress = config.get('network', 'broadcastAddress')
         self.UDPPort = int(config.get('network', 'UDPPort'))
         self.TCPPort = int(config.get('network', 'TCPPort'))
         self.WebSocketPort = int(config.get('network', 'WebSocketPort'))
+
+        try:
+            self.privateKeyPath = config.get('user', 'privateKey')
+            if os.path.isfile(self.privateKeyPath):
+                self.rsaKey = RSA.importKey((open(self.privateKeyPath, "r")).read())
+                if self.rsaKey is not None :
+                    print "RSA Key loaded successfully"
+            else:
+                self.rsaKey = None
+                print "no private found, generate one for distributed score system"
+        except ConfigParser.NoOptionError:
+            pass
+        self.config = config
         
         self.breceiver = BroadcastListener(self)
         
@@ -44,8 +58,8 @@ class Main:
         signal.signal(signal.SIGINT, self.signal_handler)
 
         self.die = False
-        self.gameLoopThread = Thread(target=self.run)
-        self.gameLoopThread.start()
+        #self.gameLoopThread = Thread(target=self.run)
+        #self.gameLoopThread.start()
         
         Thread(target=self.startWebclient).start()
         
@@ -143,6 +157,24 @@ class Main:
 
     def getUsername(self):
         return self.username
+ 
+    def generateKey(self):
+        self.rsaKey = RSA.generate(2048, os.urandom);
+    
+        fw = open("private.key", "w")
+        fw.write(self.rsaKey.exportKey());
+        fw.close()
+    
+        self.config.set("user", "privateKey", "private.key")
+        with open("config.ini", "w") as configfile:
+            self.config.write(configfile)
+        print "RSA Key generated and written to key and included to config.ini"
+
+    def getPublicKey(self):
+        return self.rsaKey.publickey()
+
+    def getPublicKeyString(self):
+        return self.rsaKey.publickey().exportKey()
  
     def run(self):
 

@@ -76,7 +76,6 @@ class AsyncUser(User):
 			dupli.sendMessage("local DUPLICATE_WEBCLIENT")
 		self.duplicates = []
 	
-	
 	def onNewBroadcastReceived(self, msgTuple):
 		broadcastingPeer,datagram = msgTuple;
 		
@@ -102,6 +101,23 @@ class AsyncUser(User):
 	
 	def getSelfIP(self):
 		return self.main.getPeerList()[0][1].transport.getHost().host;
+	
+	def scoreboard(self, p1peer, p2peer, s1peer, winner):
+		p1key = p1peer[2].publickey if p1peer[2] is not None else self.main.getPublicKey()
+		p2key = p2peer[2].publickey if p2peer[2] is not None else self.main.getPublicKey()
+		s1key = s1peer[2].publickey if s1peer[2] is not None else self.main.getPublicKey()
+		
+		if p1peer[2] is None:
+			#player1
+			pass
+		
+		
+		print "<<Score board>>"
+		print 
+		print p2peer
+		print s1peer
+		print winner
+		print "<<score board>>"
 	
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
@@ -181,6 +197,10 @@ class AsyncUser(User):
 				else: 
 					winner = winner + " wins"
 					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", winner.encode("ascii")))
+				
+				self.scoreboard(self.gameRoom.getPlayer1(), self.gameRoom.getPlayer2(), 
+							self.gameRoom.getSpectators()[0], winner)
+
 	
 		if "TTTS_MAKE_MOVE" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_MAKE_MOVE", ""))
@@ -238,7 +258,7 @@ class AsyncUser(User):
 			s1peer = self.gameRoom.getSpectators()[0]
 			selfip = self.getSelfIP()
 			
-			p1tuple = (self.main.getUsername(), "X")
+			p1tuple = (self.main.getUsername(), "X", None)
 			self.myplayer = p1tuple
 			
 			self.gameRoom.setPlayer1(p1tuple);
@@ -289,11 +309,16 @@ class AsyncUser(User):
 				else: 
 					winner = winner + " wins"
 					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER",winner.encode("ascii") ))
+				
+				self.scoreboard(self.gameRoom.getPlayer1(), self.gameRoom.getPlayer2(), 
+							self.gameRoom.getSpectators()[0], winner)
 
 			else:
 				self.main.sendMulticast("TTTS_MAKE_MOVE")
-			
-			
+		
+		if "NEW_RSA" == msgPrefix:
+			self.main.generateKey() 
+
 
 		print ">>>>>>"		
 		

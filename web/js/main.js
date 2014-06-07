@@ -178,6 +178,11 @@ Main = function() {
 		this.connect.sendMessage(msg);
 	}
 	
+	this.createNewKey = function(location) {
+		msg = Message.create("local", "NEW_RSA", location);
+		this.connect.sendMessage(msg);
+	}
+	
 	this.send = function() {
 		
 	}
@@ -194,7 +199,11 @@ Main = function() {
 
 	$("#join-room-btn").click(function(evt){
 		that.dashboard.joinRoomDOM();
-	});	
+	});
+	
+	$("#setting-btn").click(function(evt) {
+		that.dashboard.settingDOM()
+	})
 	
 }
 Main.self = null;
