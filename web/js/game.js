@@ -8,7 +8,6 @@ TicTacToe = function (controller) {
 	this.board = [];
 	this.controller = controller;
 	
-	
 	$("#confirm-move-btn").click(function(){
 		if (this.locked)
 			return;
@@ -39,6 +38,10 @@ TicTacToe = function (controller) {
 		};
 		console.log("board initialized");
 	};
+	
+	this.setTitle = function(title) {
+		$("#game-title").text(title);
+	}
 	
 	this.lockBoard = function() {
 		this.locked = true;

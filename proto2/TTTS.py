@@ -69,7 +69,7 @@ class Main:
         self.die = True
     
     def startWebclient(self):
-        os.system("/usr/bin/firefox ../web/index.html")
+        os.system("/usr/bin/google-chrome ../web/index.html")
         return
     
     def connectPeer(self, address, port):

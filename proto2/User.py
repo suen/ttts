@@ -1,5 +1,5 @@
 
-import time, re;
+import time, re, json;
 
 class WebSocketMessageParseException:
 	pass
@@ -129,16 +129,13 @@ class AsyncUser(User):
 		
 		if "START_GAME" == prefix:
 			
-			roomName = msgContent[0:msgContent.find(" ")].strip()
-			p2ip = re.search(r'2\: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+', msgContent).group()[3:].strip()
-			s1ip = re.search(r's\: [0-9]+\.[0-9]+\.[0-9]+\.[0-9]+', msgContent).group()[3:].strip()
-			
+			gameparam = json.loads(msgContent);
 			
 			p1peer = self.main.getPeerById(peerIdentity)
 			myip = p1peer.transport.getHost().host
 			
-			p2peer = self.main.getPeerByIP(p2ip) if p2ip != myip else None;
-			s1peer = self.main.getPeerByIP(s1ip) if s1ip != myip else None;
+			p2peer = self.main.getPeerByIP(gameparam['player2']) if gameparam['player2'] != myip else None;
+			s1peer = self.main.getPeerByIP(gameparam['spectators']) if gameparam['spectators'] != myip else None;
 
 			p1name = p1peer.peerName
 			p2name = p2peer.peerName if p2peer is not None else "local"
@@ -148,8 +145,10 @@ class AsyncUser(User):
 			self.gameRoom.setPlayer2(p2peer);
 			self.gameRoom.addSpectator(s1peer);
 
-			msg = "%s player1: %s player2: %s spectators: %s"%(roomName, p1name,p2name,s1name)
-			print prefix, msg
+			msg = '{"roomName": "%s","player1": "%s", "player2": "%s", "spectators": "%s", "player1Symbol": "X", "player2Symbol": "O", "firstPlay": "player1"}'%(gameparam['roomName'], p1name, p2name, s1name)
+			msg = msg.encode('ascii');
+			print "<<<<"+ str(type(msg)) + " " + msg + ">>>>>"
+
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msg))
 		
 		if "READY_GAME" == prefix:
@@ -207,8 +206,17 @@ class AsyncUser(User):
 			
 			self.gameRoom.setPlayer1(None);
 			
-			msg = "START_GAME %s player1: %s player2: %s spectators: %s"%(roomName, selfip, p2peer.ip, s1peer.ip)
+			msg = '''START_GAME {"roomName": "%s", "player1": "%s", "player2": "%s", "spectators": "%s", "player1Symbol": "X", "player2Symbol": "O", "firstPlay": "player1"}'''%(roomName, selfip, p2peer.ip, s1peer.ip)
 			
+			msgloopback = '''{"roomName": "%s", 
+					"player1": "local", 
+					"player2": "%s", 
+					"spectators": "%s",
+					"player1Symbol": "X",
+					"player2Symbol": "O",
+					"firstPlay": "player1"}'''%(roomName, p2peer.peerName, s1peer.peerName)			
+			
+			self.webclient.sendMessage(WebSocketMessage.create("local","START_GAME", msgloopback))
 			self.main.sendMulticast(msg)
 		
 		if "READY_GAME" == msgPrefix:

@@ -87,8 +87,36 @@ Main = function() {
 
 	this.gameStarted = false;
 	
-	this.startGame = function() {
+	this.startGame = function(param) {
+		param = param.trim();
+		param = JSON.parse(param);
+		
 		if (!this.gameStarted) {
+			
+			player1 = param['player1'] =="local" ? new Peer("0_myself") : new Peer(param['player1']);
+			player2 = param['player2'] =="local" ? new Peer("0_myself") : new Peer(param['player2']);
+			spectators = param['spectators'] =="local" ? "myself" : param['spectators']; 
+
+			player1symbol = param['player1Symbol'];
+			player2symbol = param['player2Symbol'];
+			firstplayer = param['firstPlay']
+			
+			if (player1.getName()=="myself") {
+				this.tic.setPlayerChar(player1symbol)
+			}
+
+			if (player2.getName()=="myself") {
+				this.tic.setPlayerChar(player2symbol)
+			}
+
+			console.log("FirstPlayer: " + firstplayer + " >> " + player1.getName())
+			if (firstplayer=="player1" && player1.getName() == "myself" ||
+				firstplayer=="player2" && player2.getName() == "myself" ) {
+				this.tic.unlockBoard();
+			}
+
+			
+			this.tic.setTitle(player1.getName() + " vs " + player2.getName());
 			this.tic.createBoard();
 			this.tic.show();
 		}
@@ -128,7 +156,6 @@ Main = function() {
 	this.sendStartGame = function(roomName) {
 		msg = Message.create("broadcast", "START_GAME", roomName);
 		this.connect.sendMessage(msg);
-		this.startGame();
 	}
 	
 	this.reBroadcastLastMessage = function() {
@@ -171,5 +198,5 @@ Main.Instance = function(){
 m = null;
 console.log(m)
 $(document).ready(function() {
-	Main.Instance();
+	m = Main.Instance();
 });
