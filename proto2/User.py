@@ -179,7 +179,8 @@ class AsyncUser(User):
 				if winner  == "":
 					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", "nobody wins"))
 				else: 
-					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", winner + "wins"))
+					winner = winner + " wins"
+					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", winner.encode("ascii")))
 	
 		if "TTTS_MAKE_MOVE" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_MAKE_MOVE", ""))
@@ -286,7 +287,8 @@ class AsyncUser(User):
 				if winner  == "":
 					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", "nobody wins"))
 				else: 
-					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", winner + "wins"))
+					winner = winner + " wins"
+					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER",winner.encode("ascii") ))
 
 			else:
 				self.main.sendMulticast("TTTS_MAKE_MOVE")

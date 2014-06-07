@@ -127,7 +127,7 @@ Dashboard = function(main) {
 		
 		tr = $("<tr>");
 		tdtime = $("<td>").text(hour + ":" + minute + ":" + second)
-		td = $("<td>").text(msg);
+		td = $("<td>").text(roomName + " by " + peer.getName());
 		tdbtn = $("<td>").append(acceptBtn);
 		tdbtn2 = $("<td>").append(canWatchBtn);
 		tr.append(tdtime)
