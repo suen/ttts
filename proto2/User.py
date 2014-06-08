@@ -2,6 +2,7 @@
 import time, re, json, hashlib;
 from ring import Ring
 import Crypto.PublicKey.RSA as RSA
+import sqlite3
 
 class WebSocketMessageParseException:
 	pass
@@ -61,6 +62,7 @@ class AsyncUser(User):
 		self.ringCount = []
 		self.summary = None;
 		self.validrings = []
+		self.dbwritten = False;
 	
 	def setWebClient(self, webclient):
 		if self.webclient is not None and self.webclient != webclient:
@@ -265,8 +267,28 @@ class AsyncUser(User):
 			print "Ring verification failed "
 		
 		print str(len(self.validrings)) + " rings verified"
+		self.storeifthree()
 	
+	def storeifthree(self):
+		if len(self.validrings) != 3:
+			return
 	
+		signs = []
+		for r in self.validrings:
+			signs.append(r[1]['sign'])
+		
+		storeObj = (self.validrings[0][1]['sha256'], json.dumps(self.validrings[0][1]['result']), json.dumps(signs))
+
+		conn = sqlite3.connect("ttts.db")
+		cursor = conn.cursor()
+		
+		cursor.execute("insert into statistics(hash, result, signs) VALUES (?, ?, ?)", storeObj)
+		conn.commit()
+		self.dbwritten = True;
+		
+		print "<<<<<Result written to DB>>>>>>>"
+
+
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
 		print "<<<<<<Peer msg"
@@ -298,6 +320,7 @@ class AsyncUser(User):
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "START_GAME" == prefix:
+			self.dbwritten = False;
 			gameparam = json.loads(msgContent);
 			
 			p1peer = self.main.getPeerById(peerIdentity)
