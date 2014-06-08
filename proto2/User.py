@@ -1,5 +1,6 @@
 
-import time, re, json;
+import time, re, json, hashlib;
+from ring import Ring
 
 class WebSocketMessageParseException:
 	pass
@@ -55,6 +56,9 @@ class AsyncUser(User):
 		self.player = None;
 		self.opponent = None;
 		self.spectators = [];
+		self.rings = []
+		self.ringCount = []
+		self.summary = None;
 	
 	def setWebClient(self, webclient):
 		if self.webclient is not None and self.webclient != webclient:
@@ -102,22 +106,101 @@ class AsyncUser(User):
 	def getSelfIP(self):
 		return self.main.getPeerList()[0][1].transport.getHost().host;
 	
-	def scoreboard(self, p1peer, p2peer, s1peer, winner):
+	def createScoreFile(self, p1peer, p2peer, s1peer, winner):
+		p1key = p1peer[2].publickey.publickey().exportKey() if p1peer[2] is not None else self.main.getPublicKeyString()
+		p2key = p2peer[2].publickey.publickey().exportKey() if p2peer[2] is not None else self.main.getPublicKeyString()
+		s1key = s1peer[2].publickey.publickey().exportKey() if s1peer[2] is not None else self.main.getPublicKeyString()
+		
+		p1name = p1peer[0][p1peer[0].find("_")+1:] if p1peer[0].find("_") > 0 else p1peer[0]
+		p2name = p2peer[0][p2peer[0].find("_")+1:] if p2peer[0].find("_") > 0 else p2peer[0]
+		s1name = s1peer[0][s1peer[0].find("_")+1:] if s1peer[0].find("_") > 0 else s1peer[0]
+		
+		print "creating string for winner " + winner
+		
+		if winner[0] == "X":
+			winner = p1name
+		elif winner[0] == "O":
+			winner = p2name
+		else:
+			winner = "draw"
+				
+		resultString = "{'game': 'TicTacToe', "\
+					"'player1': ['%s', '%s'], "\
+					"'player2': ['%s', '%s'], "\
+					"'spectator':['%s', '%s'], "\
+					"'winner': '%s'}"%(p1name, p1key,p2name,p2key,s1name,s1key,winner)
+		
+		shaHash = hashlib.sha256(resultString).hexdigest()			
+					
+		print "Message String created for the game %s"%resultString
+		print "SHA256: %s"%shaHash
+		return (shaHash, resultString)
+		
+	
+	def gameSummary(self, p1peer, p2peer, s1peer, winner):
 		p1key = p1peer[2].publickey if p1peer[2] is not None else self.main.getPublicKey()
 		p2key = p2peer[2].publickey if p2peer[2] is not None else self.main.getPublicKey()
 		s1key = s1peer[2].publickey if s1peer[2] is not None else self.main.getPublicKey()
 		
+		scoreJsonHash, scoreJson = self.createScoreFile(p1peer, p2peer, s1peer, winner)
+		
+		myprivateKey = self.main.rsaKey;
+
 		if p1peer[2] is None:
-			#player1
-			pass
+			#create two ring with both player and sign it and send it to the other two
+			ringP1P2 = Ring([p1key, p2key], 2048)
+			ringP1S1 = Ring([p1key, s1key], 2048)
+
+			signp1p2 = ringP1P2.sign(scoreJsonHash, myprivateKey);
+			signp1s1 = ringP1S1.sign(scoreJsonHash, myprivateKey);
+
+			signs = [{"player1:player2": signp1p2}, {"player1:spectator1": signp1s1}]
 		
+		if p2peer[2] is None:
+			ringP1P2 = Ring([p1key, p2key], 2048)
+			ringP2S1 = Ring([p2key, s1key], 2048)
+
+			signp1p2 = ringP1P2.sign(scoreJsonHash, myprivateKey);
+			signp2s1 = ringP2S1.sign(scoreJsonHash, myprivateKey);
+
+			signs = [{"player1:player2": signp1p2}, {"player2:spectator1": signp2s1}]
 		
-		print "<<Score board>>"
-		print 
-		print p2peer
-		print s1peer
-		print winner
-		print "<<score board>>"
+		if s1peer[2] is None:
+			ringP1S1 = Ring([p1key, s1key], 2048)
+			ringP2S1 = Ring([p2key, s1key], 2048)
+
+			signp1s1 = ringP1S1.sign(scoreJsonHash, myprivateKey);
+			signp2s1 = ringP2S1.sign(scoreJsonHash, myprivateKey);
+
+			signs = [{"player1:spectator1": signp1s1}, {"player2:spectator1": signp2s1}]
+	
+		self.summary = [{"result": scoreJson,
+					"sha256": scoreJsonHash,
+					"sign": signs[0]
+				},{"result": scoreJson,
+					"sha256": scoreJsonHash,
+					"sign": signs[1]
+				}]
+		print ">>>>>>>Summary ready<<<<<<<";
+	
+		#print "<<Results>>"
+		#print summary
+		#print
+		
+		if p1peer[2] is None:
+			self.main.sendMulticast("SIGN_RESULT")
+			
+			signedResults = self.summary
+			
+			self.main.sendMulticast("RESULT_RING " + json.dumps(signedResults[0]))
+			self.main.sendMulticast("RESULT_RING " + json.dumps(signedResults[1]))
+		
+
+	def retransmitRings(self):
+		for i in range(0, len(self.rings)):
+			if i not in self.ringCount:
+				self.main.sendMulticast("RESULT_RING " + self.rings[i])
+				self.ringCount.append(i)
 	
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
@@ -198,12 +281,34 @@ class AsyncUser(User):
 					winner = winner + " wins"
 					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER", winner.encode("ascii")))
 				
-				self.scoreboard(self.gameRoom.getPlayer1(), self.gameRoom.getPlayer2(), 
+				self.gameSummary(self.gameRoom.getPlayer1(), self.gameRoom.getPlayer2(), 
 							self.gameRoom.getSpectators()[0], winner)
 
 	
 		if "TTTS_MAKE_MOVE" == prefix:
 			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_MAKE_MOVE", ""))
+	
+		if "SIGN_RESULT" == prefix:
+			if self.summary is None:
+				print "!!!!Game summary not ready yet!!!!!"
+				time.sleep(3)
+				self.onPeerMsgReceived(peerIdentity, msg)
+				return
+			
+			signedResults = self.summary
+			
+			self.main.sendMulticast("RESULT_RING " + json.dumps(signedResults[0]))
+			self.main.sendMulticast("RESULT_RING " + json.dumps(signedResults[1]))
+			pass
+	
+		if "RESULT_RING" == prefix:
+			ringContent = msgContent.strip()
+			if ringContent not in self.rings:
+				self.rings.append(ringContent)
+				(open("ring" + str(len(self.rings)), "w")).write(ringContent)
+				
+			self.retransmitRings();
+	
 	
 		print ">>>>>>"
 
@@ -310,14 +415,16 @@ class AsyncUser(User):
 					winner = winner + " wins"
 					self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER",winner.encode("ascii") ))
 				
-				self.scoreboard(self.gameRoom.getPlayer1(), self.gameRoom.getPlayer2(), 
+				self.gameSummary(self.gameRoom.getPlayer1(), self.gameRoom.getPlayer2(), 
 							self.gameRoom.getSpectators()[0], winner)
+				print "Summary is ready"
 
 			else:
 				self.main.sendMulticast("TTTS_MAKE_MOVE")
 		
 		if "NEW_RSA" == msgPrefix:
 			self.main.generateKey() 
+
 
 
 		print ">>>>>>"		

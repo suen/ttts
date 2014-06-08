@@ -93,7 +93,7 @@ class MyTCPProtocol(LineReceiver):
     
     def lineReceived(self, line):       
         
-        print "TCP RECEIVED < %s >"%line
+        #print "TCP RECEIVED < %s >"%line
         
         if "CONNECT " in line:         
             space_index = line.find(" ")    
