@@ -1,6 +1,7 @@
 
 import time, re, json, hashlib;
 from ring import Ring
+import Crypto.PublicKey.RSA as RSA
 
 class WebSocketMessageParseException:
 	pass
@@ -59,6 +60,7 @@ class AsyncUser(User):
 		self.rings = []
 		self.ringCount = []
 		self.summary = None;
+		self.validrings = []
 	
 	def setWebClient(self, webclient):
 		if self.webclient is not None and self.webclient != webclient:
@@ -154,7 +156,7 @@ class AsyncUser(User):
 			signp1p2 = ringP1P2.sign(scoreJsonHash, myprivateKey);
 			signp1s1 = ringP1S1.sign(scoreJsonHash, myprivateKey);
 
-			signs = [{"player1:player2": signp1p2}, {"player1:spectator1": signp1s1}]
+			signs = [{"player1:player2": signp1p2}, {"player1:spectator": signp1s1}]
 		
 		if p2peer[2] is None:
 			ringP1P2 = Ring([p1key, p2key], 2048)
@@ -163,7 +165,7 @@ class AsyncUser(User):
 			signp1p2 = ringP1P2.sign(scoreJsonHash, myprivateKey);
 			signp2s1 = ringP2S1.sign(scoreJsonHash, myprivateKey);
 
-			signs = [{"player1:player2": signp1p2}, {"player2:spectator1": signp2s1}]
+			signs = [{"player1:player2": signp1p2}, {"player2:spectator": signp2s1}]
 		
 		if s1peer[2] is None:
 			ringP1S1 = Ring([p1key, s1key], 2048)
@@ -172,7 +174,7 @@ class AsyncUser(User):
 			signp1s1 = ringP1S1.sign(scoreJsonHash, myprivateKey);
 			signp2s1 = ringP2S1.sign(scoreJsonHash, myprivateKey);
 
-			signs = [{"player1:spectator1": signp1s1}, {"player2:spectator1": signp2s1}]
+			signs = [{"player1:spectator": signp1s1}, {"player2:spectator": signp2s1}]
 	
 		self.summary = [{"result": scoreJson,
 					"sha256": scoreJsonHash,
@@ -201,6 +203,69 @@ class AsyncUser(User):
 			if i not in self.ringCount:
 				self.main.sendMulticast("RESULT_RING " + self.rings[i])
 				self.ringCount.append(i)
+	
+	def validateRings(self, ringContent):
+		ring = json.loads(ringContent)
+		
+		result = ring['result'] 
+		sha256 = ring['sha256']
+		ringsignature = ring['sign']
+		
+		testsha256 = hashlib.sha256(result).hexdigest()
+
+		if testsha256 != sha256:
+			print "The hashes %s and %s are not equal"%(testsha256,sha256)
+			return;
+		
+		result = json.loads(result.replace("'", "\"").replace("\n", "$"))
+		
+		p1 = result['player1']
+		p2 = result['player2']
+		s1 = result['spectator']
+		
+		p1key = RSA.importKey(p1[1].replace("$", "\n"))
+		p2key = RSA.importKey(p2[1].replace("$", "\n"))
+		s1key = RSA.importKey(s1[1].replace("$", "\n"))
+		
+		ringGroupStr = ringsignature.keys()[0]
+		
+		ringGroup = ringGroupStr.split(":")
+		
+		if ringGroup[0] == "player1":
+			firstkey = p1key;
+		elif ringGroup[0] == "player2":
+			firstkey = p2key;
+		elif ringGroup[0] == "spectator":
+			firstkey = s1key
+		else:
+			print "Signature label unknown: " + ringGroup[1]
+		
+		if ringGroup[1] == "player1":
+			secondkey = p1key;
+		elif ringGroup[1] == "player2":
+			secondkey = p2key;
+		elif ringGroup[1] == "spectator":
+			secondkey = s1key
+		else:
+			print "Signature label unknown: " + ringGroup[1]
+			
+		testring = Ring([firstkey, secondkey], 2048)
+		
+		verify = testring.verify(sha256, ringsignature[ringsignature.keys()[0]] )
+
+		if (verify):
+			added = False
+			for (k, r) in self.validrings:
+				if k == ringGroupStr:
+					added = True
+			
+			if not added:
+				self.validrings.append((ringGroupStr, ring))
+		else:
+			print "Ring verification failed "
+		
+		print str(len(self.validrings)) + " rings verified"
+	
 	
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
@@ -306,6 +371,7 @@ class AsyncUser(User):
 			if ringContent not in self.rings:
 				self.rings.append(ringContent)
 				(open("ring" + str(len(self.rings)), "w")).write(ringContent)
+				self.validateRings(ringContent)
 				
 			self.retransmitRings();
 	
