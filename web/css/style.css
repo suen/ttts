@@ -130,3 +130,18 @@
 		width: 200px;
 		height: 50px;
 	}
+	
+	.stat {
+		width: 300px;
+	}
+	
+	.stat td {
+		border: 1px solid #dfdfdf;
+	
+	}
+	
+	.stat tr.stattitle {
+		font-weight: bold;
+		font-size: 1.3em;
+		
+	}

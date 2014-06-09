@@ -6,6 +6,33 @@ Dashboard = function(main) {
 	
 	this.peerListTableNode.text("");
 
+	this.createStatDOM = function(winnerList) {
+		divcontainer = $("<div>")
+		h2 = $("<h2>").text("Statistics")
+		
+		table = $("<table>").attr("class", "table stat");
+		
+		td11 = $("<td>").text("Player");
+		td12 = $("<td>").text("TimesOwn");
+		
+		tr = $("<tr>").attr("class", "stattitle").append(td11).append(td12);
+		table.append(tr)
+		
+		for(i=0; i<winnerList.length; i++) {
+			winner = winnerList[i]['player']
+			timesown = winnerList[i]['timeswon']
+
+			td11 = $("<td>").text(winner);
+			td12 = $("<td>").text(timesown );
+			
+			tr = $("<tr>").append(td11).append(td12);
+			table.append(tr)
+		}
+		divcontainer.append(h2).append(table)
+		$("#content").html(divcontainer)
+	}
+	
+	
 	this.addNewPeer = function(peer) {
 		
 		td = $("<td>").text(peer.getName());
@@ -59,7 +86,7 @@ Dashboard = function(main) {
 		
 		divcontainer.append(h2).append(table);
 		
-		$("#content").append(divcontainer)
+		$("#content").html(divcontainer)
 		
 		createButton.click(function(evt) {
 
@@ -95,7 +122,7 @@ Dashboard = function(main) {
 		
 		divcontainer.append(h2).append(table);
 		
-		$("#content").append(divcontainer)
+		$("#content").html(divcontainer)
 		
 		createButton.click(function(evt) {
 			roomName = $(this).parent().parent().prev().children().last().children().val()

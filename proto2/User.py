@@ -62,7 +62,6 @@ class AsyncUser(User):
 		self.ringCount = []
 		self.summary = None;
 		self.validrings = []
-		self.dbwritten = False;
 	
 	def setWebClient(self, webclient):
 		if self.webclient is not None and self.webclient != webclient:
@@ -83,6 +82,24 @@ class AsyncUser(User):
 		for dupli in self.duplicates:
 			dupli.sendMessage("local DUPLICATE_WEBCLIENT")
 		self.duplicates = []
+	
+	def sendStatistics(self):
+		cursor = sqlite3.connect("ttts.db").cursor()
+		
+		cursor.execute("select winner, count(*) as timeswon from statistics");
+		
+		results = cursor.fetchall()
+		
+		statsPlay = []
+		for result in results:
+			statPlay = {}
+			statPlay['player'] = result[0]
+			statPlay['timeswon'] = result[1]
+			statsPlay.append(statPlay);
+
+		statString = json.dumps(statsPlay);
+		msgstr = WebSocketMessage.create("local", "STAT_TIMES_WON", statString)
+		self.webclient.sendMessage(msgstr)		
 	
 	def onNewBroadcastReceived(self, msgTuple):
 		broadcastingPeer,datagram = msgTuple;
@@ -225,9 +242,13 @@ class AsyncUser(User):
 		p2 = result['player2']
 		s1 = result['spectator']
 		
-		p1key = RSA.importKey(p1[1].replace("$", "\n"))
-		p2key = RSA.importKey(p2[1].replace("$", "\n"))
-		s1key = RSA.importKey(s1[1].replace("$", "\n"))
+		result['player1'][1] = result['player1'][1].replace("$", "\n")
+		result['player2'][1] = result['player2'][1].replace("$", "\n")
+		result['spectator'][1] = result['spectator'][1].replace("$", "\n")
+		
+		p1key = RSA.importKey(result['player1'][1])
+		p2key = RSA.importKey(result['player2'][1])
+		s1key = RSA.importKey(result['spectator'][1])
 		
 		ringGroupStr = ringsignature.keys()[0]
 		
@@ -262,6 +283,7 @@ class AsyncUser(User):
 					added = True
 			
 			if not added:
+				ring['result'] = result;
 				self.validrings.append((ringGroupStr, ring))
 		else:
 			print "Ring verification failed "
@@ -277,14 +299,29 @@ class AsyncUser(User):
 		for r in self.validrings:
 			signs.append(r[1]['sign'])
 		
-		storeObj = (self.validrings[0][1]['sha256'], json.dumps(self.validrings[0][1]['result']), json.dumps(signs))
+		player1 = self.validrings[0][1]['result']['player1'][0]
+		player2 = self.validrings[0][1]['result']['player2'][0]
+		spectator = self.validrings[0][1]['result']['spectator'][0]
+		winner = self.validrings[0][1]['result']['winner']
+		
+		storeObj = (self.validrings[0][1]['sha256'], json.dumps(self.validrings[0][1]['result']), json.dumps(signs),
+				player1, player2, spectator, winner)
 
 		conn = sqlite3.connect("ttts.db")
 		cursor = conn.cursor()
 		
-		cursor.execute("insert into statistics(hash, result, signs) VALUES (?, ?, ?)", storeObj)
+		sha256 = str(self.validrings[0][1]['sha256']);
+		
+		#print "SHA2 for result " + sha256
+		
+		cursor.execute("select * from statistics where hash = ?", (sha256,) )
+
+		if cursor.fetchone() is not None:
+			return;
+		
+		cursor.execute("insert into statistics(hash, result, signs, player1, player2, spectator, winner)"\
+					" VALUES (?, ?, ?, ?, ?, ?, ?)", storeObj)
 		conn.commit()
-		self.dbwritten = True;
 		
 		print "<<<<<Result written to DB>>>>>>>"
 
@@ -320,7 +357,6 @@ class AsyncUser(User):
 			self.webclient.sendMessage(WebSocketMessage.create(peerIdentity, prefix, msgContent))
 		
 		if "START_GAME" == prefix:
-			self.dbwritten = False;
 			gameparam = json.loads(msgContent);
 			
 			p1peer = self.main.getPeerById(peerIdentity)
@@ -411,6 +447,9 @@ class AsyncUser(User):
 		if "PEER_LIST" == msgPrefix:
 			self.onPeerListChange()
 			
+		if "STAT_TIMES_WON" == msgPrefix:
+			self.sendStatistics()
+				
 		if "CHAT" == msgPrefix:
 			self.main.sendMessage(peerIdentity, "CHAT " + msgContent);
 			

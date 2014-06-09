@@ -13,7 +13,8 @@ Main = function() {
 	}
 	
 	this.onSocketConnect = function() {
-		this.connect.sendMessage("local PEER_LIST");	
+		this.connect.sendMessage("local PEER_LIST");
+		this.connect.sendMessage("local STAT_TIMES_WON");
 	}
 	
 	this.onMessageReceived = function(msg) {
@@ -58,6 +59,11 @@ Main = function() {
 				Logger.log("Peer list obtained");
 				break;
 
+			case "STAT_TIMES_WON":
+				Logger.log("STAT received");
+				this.dashboard.createStatDOM(JSON.parse(content))
+				break;
+				
 			case "CHAT":
 				Chat.getChat(sender).onMessageReceived(content);
 				break;
