@@ -13,7 +13,7 @@ Dashboard = function(main) {
 		table = $("<table>").attr("class", "table stat");
 		
 		td11 = $("<td>").text("Player");
-		td12 = $("<td>").text("TimesOwn");
+		td12 = $("<td>").text("Times Won");
 		
 		tr = $("<tr>").attr("class", "stattitle").append(td11).append(td12);
 		table.append(tr)
@@ -32,6 +32,25 @@ Dashboard = function(main) {
 		$("#content").html(divcontainer)
 	}
 	
+	
+	this.gameovermsgcontainer = null;
+	this.gameoverDOM = function(winmessage) {
+		divcontainer = $("<div>").attr("class", "game-over-messages");
+		h2 = $("<h2>").text("Game over")
+		h3 = $("<h3>").text(winmessage)
+
+		msgcontainer = $("<div>");
+		
+		this.gameovermsgcontainer = msgcontainer;
+		
+		divcontainer.append(h2).append(h3).append(msgcontainer)
+		
+		$("#content").append(divcontainer)
+	}
+	
+	this.addnewgameovermessage = function(msg) {
+		this.gameovermsgcontainer.append($("<p>").text(msg))
+	}
 	
 	this.addNewPeer = function(peer) {
 		

@@ -90,6 +90,8 @@ class Main:
         self.net.connectPeer(address, port);
 
     def setWebClient(self, client):
+        print "new webclient"
+        self.user = AsyncUser(self)
         self.user.setWebClient(client);
 #        self.player1 = AsyncPlayer("Web Player", "X", self)
 #        self.player1.setWebSocket(self.webClient)

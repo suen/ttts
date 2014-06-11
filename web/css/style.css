@@ -145,3 +145,21 @@
 		font-size: 1.3em;
 		
 	}
+	
+	.game-over-messages {
+		width: 500px;
+		height: 520px;
+		position: absolute;
+		left: 50px;
+		top: 0px;
+		padding: 10px;
+		background: #dfdfdf;
+		z-index: 5;
+		opacity: 0.9;
+		overflow: scroll;
+	}
+	
+	.game-over-messages p {
+		padding-left: 20px;
+	
+	}

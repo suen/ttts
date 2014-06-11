@@ -62,6 +62,7 @@ class AsyncUser(User):
 		self.ringCount = []
 		self.summary = None;
 		self.validrings = []
+		self.dbwritten = False
 	
 	def setWebClient(self, webclient):
 		if self.webclient is not None and self.webclient != webclient:
@@ -86,7 +87,7 @@ class AsyncUser(User):
 	def sendStatistics(self):
 		cursor = sqlite3.connect("ttts.db").cursor()
 		
-		cursor.execute("select winner, count(*) as timeswon from statistics");
+		cursor.execute("select winner, count(*) as timeswon from statistics group by winner");
 		
 		results = cursor.fetchall()
 		
@@ -144,12 +145,15 @@ class AsyncUser(User):
 			winner = p2name
 		else:
 			winner = "draw"
+		
+		datetime = time.strftime("%Y-%m-%d %H:%M", time.gmtime())
 				
 		resultString = "{'game': 'TicTacToe', "\
+					"'datetime': '%s',"\
 					"'player1': ['%s', '%s'], "\
 					"'player2': ['%s', '%s'], "\
 					"'spectator':['%s', '%s'], "\
-					"'winner': '%s'}"%(p1name, p1key,p2name,p2key,s1name,s1key,winner)
+					"'winner': '%s'}"%(datetime, p1name, p1key,p2name,p2key,s1name,s1key,winner)
 		
 		shaHash = hashlib.sha256(resultString).hexdigest()			
 					
@@ -203,6 +207,9 @@ class AsyncUser(User):
 					"sign": signs[1]
 				}]
 		print ">>>>>>>Summary ready<<<<<<<";
+		self.webclient.sendMessage(WebSocketMessage.create
+					("local","TTTS_GAME_OVER_MSGS","Game Result Object [" + str(scoreJsonHash) + "] created and signed"))
+	
 	
 		#print "<<Results>>"
 		#print summary
@@ -222,18 +229,25 @@ class AsyncUser(User):
 			if i not in self.ringCount:
 				self.main.sendMulticast("RESULT_RING " + self.rings[i])
 				self.ringCount.append(i)
+				self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS","Rings retransmitted to peers"))
+
 	
 	def validateRings(self, ringContent):
+		
+		if self.dbwritten:
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS","Rings verification cancelled, results already written to DB"))
+			return
+		
 		ring = json.loads(ringContent)
 		
-		result = ring['result'] 
+		result = ring['result']
 		sha256 = ring['sha256']
 		ringsignature = ring['sign']
 		
 		testsha256 = hashlib.sha256(result).hexdigest()
 
 		if testsha256 != sha256:
-			print "The hashes %s and %s are not equal"%(testsha256,sha256)
+			print "ERROR: The hashes %s and %s are not equal"%(testsha256,sha256)
 			return;
 		
 		result = json.loads(result.replace("'", "\"").replace("\n", "$"))
@@ -287,13 +301,18 @@ class AsyncUser(User):
 				self.validrings.append((ringGroupStr, ring))
 		else:
 			print "Ring verification failed "
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS","Verification of a ring failed"))
 		
-		print str(len(self.validrings)) + " rings verified"
+		verif = str(len(self.validrings)) + " rings verified"
+		print verif
+		self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS", verif))
 		self.storeifthree()
 	
 	def storeifthree(self):
 		if len(self.validrings) != 3:
 			return
+
+		self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS", "writing to database"))
 	
 		signs = []
 		for r in self.validrings:
@@ -313,10 +332,12 @@ class AsyncUser(User):
 		sha256 = str(self.validrings[0][1]['sha256']);
 		
 		#print "SHA2 for result " + sha256
+		self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS", "Checking database for hash " + sha256))
 		
 		cursor.execute("select * from statistics where hash = ?", (sha256,) )
 
 		if cursor.fetchone() is not None:
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS", "Rings exist in database!!"))
 			return;
 		
 		cursor.execute("insert into statistics(hash, result, signs, player1, player2, spectator, winner)"\
@@ -324,7 +345,8 @@ class AsyncUser(User):
 		conn.commit()
 		
 		print "<<<<<Result written to DB>>>>>>>"
-
+		self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS","Game result written to database"))
+		self.dbwritten = True
 
 	def onPeerMsgReceived(self, peerIdentity, msg):
 		
@@ -423,15 +445,21 @@ class AsyncUser(User):
 			
 			self.main.sendMulticast("RESULT_RING " + json.dumps(signedResults[0]))
 			self.main.sendMulticast("RESULT_RING " + json.dumps(signedResults[1]))
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS","Two rings signed and sent to peers"))
+			
 			pass
 	
 		if "RESULT_RING" == prefix:
+			if self.dbwritten:
+				return
 			ringContent = msgContent.strip()
+			self.webclient.sendMessage(WebSocketMessage.create("local","TTTS_GAME_OVER_MSGS","A new ring received from " + peerIdentity))
+
 			if ringContent not in self.rings:
 				self.rings.append(ringContent)
 				(open("ring" + str(len(self.rings)), "w")).write(ringContent)
 				self.validateRings(ringContent)
-				
+
 			self.retransmitRings();
 	
 	
@@ -545,6 +573,8 @@ class AsyncUser(User):
 				
 				self.gameSummary(self.gameRoom.getPlayer1(), self.gameRoom.getPlayer2(), 
 							self.gameRoom.getSpectators()[0], winner)
+				
+																
 				print "Summary is ready"
 
 			else:

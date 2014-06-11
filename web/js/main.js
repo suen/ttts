@@ -99,7 +99,12 @@ Main = function() {
 			case "TTTS_GAME_OVER":
 				this.tic.lockBoard();
 				this.tic.gameover = true;
-				Logger.log(content);
+				this.dashboard.gameoverDOM(content);
+				break;
+			case "TTTS_GAME_OVER_MSGS":
+				this.dashboard.addnewgameovermessage(content);
+				break;
+
 		}
 	};
 
