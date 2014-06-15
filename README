@@ -3,3 +3,4 @@ ttts
 
 A peer to peer tic tac to write in python that allow watcher to validate the score using ring signature to vote anonymously
 
+Other functionalities include p2p chat
